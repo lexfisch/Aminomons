@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="10" height="20" tilewidth="64" tileheight="64" infinite="0" nextlayerid="10" nextobjectid="55">
+ <tileset firstgid="1" source="../tileset/indoor_tiles.tsx"/>
+ <tileset firstgid="91" source="../tileset/spriteSheet_tiledLiquids_32x32.tsx"/>
+ <layer id="1" name="Terrain" width="10" height="20" locked="1">
+  <data encoding="csv">
+6,3221225492,3221225491,7,7,7,7,3221225492,3221225491,8,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,47,47,47,47,47,48,
+46,47,47,47,9,10,47,47,47,48,
+56,57,57,57,19,20,57,57,57,58
+</data>
+ </layer>
+ <layer id="9" name="Terrain Top" width="10" height="20">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="GameObjects">
+  <object id="6" name="Player" x="286.804" y="1135.83">
+   <properties>
+    <property name="direction" value="up"/>
+    <property name="pos" value="world"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="19" name="Character" x="98.6427" y="371.984">
+   <properties>
+    <property name="character_id" value="boss"/>
+    <property name="direction" value="right"/>
+    <property name="graphic" value="boss"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="20" name="Character" x="98.8473" y="553.575">
+   <properties>
+    <property name="character_id" value="healer"/>
+    <property name="direction" value="right"/>
+    <property name="graphic" value="healer"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="50" name="Player" x="125.333" y="148">
+   <properties>
+    <property name="direction" value="down"/>
+    <property name="pos" value="biochem1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="51" name="Player" x="509.333" y="154.667">
+   <properties>
+    <property name="direction" value="down"/>
+    <property name="pos" value="biology1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="52" name="Character" x="94.6667" y="680">
+   <properties>
+    <property name="character_id" value="fuser"/>
+    <property name="direction" value="right"/>
+    <property name="graphic" value="fuser"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="53" name="Character" x="101.334" y="809.333">
+   <properties>
+    <property name="character_id" value="unfuser"/>
+    <property name="direction" value="right"/>
+    <property name="graphic" value="unfuser"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="54" name="Character" x="104" y="937.333">
+   <properties>
+    <property name="character_id" value="storage"/>
+    <property name="direction" value="right"/>
+    <property name="graphic" value="storage"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="3" name="Collisions">
+  <object id="1" x="21.5333" y="21.5333" width="35.3761" height="1244.32"/>
+  <object id="2" x="193.8" y="15.3809" width="253.785" height="46.1428"/>
+  <object id="3" x="581.399" y="24.6095" width="38.4523" height="1235.09"/>
+  <object id="4" x="64.5999" y="1219.71" width="192.261" height="49.2189"/>
+  <object id="5" x="392.213" y="1225.86" width="175.342" height="38.4523"/>
+  <object id="49" x="265.5" y="1228.5" width="108" height="38"/>
+ </objectgroup>
+ <objectgroup id="8" name="ChemicalSpills">
+  <object id="29" gid="137" x="512.5" y="800.25" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="30" gid="137" x="512.75" y="832.25" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="31" gid="137" x="544.75" y="832.25" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="32" gid="137" x="544.25" y="800.5" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="37" gid="137" x="448.625" y="800.5" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="38" gid="137" x="448.875" y="832.5" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="39" gid="137" x="480.875" y="832.5" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="40" gid="137" x="480.375" y="800.75" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="41" gid="137" x="511.563" y="736.125" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="42" gid="137" x="511.813" y="768.125" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="43" gid="137" x="543.813" y="768.125" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="44" gid="137" x="543.313" y="736.375" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="45" gid="137" x="447.688" y="736.375" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="46" gid="137" x="447.938" y="768.375" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="47" gid="137" x="479.938" y="768.375" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="48" gid="137" x="479.438" y="736.625" width="32" height="32">
+   <properties>
+    <property name="aminos" value="alanine,arginine,asparagine,aspartic"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="6" name="Objects"/>
+ <objectgroup id="5" name="Transition">
+  <object id="7" x="98.4379" y="23.0714" width="53.8332" height="36.9142">
+   <properties>
+    <property name="pos" value="world"/>
+    <property name="target" value="biochem1"/>
+   </properties>
+  </object>
+  <object id="8" x="487.575" y="33.838" width="47.6808" height="24.6095">
+   <properties>
+    <property name="pos" value="world"/>
+    <property name="target" value="biology1"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>
