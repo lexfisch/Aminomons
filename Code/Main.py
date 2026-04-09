@@ -13,7 +13,7 @@ from BigBigData import *
 from Sprites import *
 from GameObjects import Player, NPC
 from SpriteGroups import WorldSprites
-from Dialog import DialogSel
+from Dialog import DialogSel   
 from AminoIndex import *
 from FightFightFight import *
 from TimerForTimingThings import *
@@ -278,13 +278,11 @@ class Game:
                 self.player.unblock()
 
         if character.fuser:
-            for monster in self.player_monsters.values():
-                self.check_fusion()
+            self.check_fusion()
             self.player.unblock()
 
         if character.unfuser:
-            for monster in self.player_monsters.values():
-                self.check_unfusion()
+            self.check_unfusion()
             self.player.unblock()
 
         if character.storagePC:

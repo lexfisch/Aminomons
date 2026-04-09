@@ -20,7 +20,7 @@ class GameObject(pygame.sprite.Sprite):
         self.facing_direction = facing_direction
         self.direction = vector()
         self.speed = 250
-        #self.blocked = False
+        self.blocked = False
         self.image = self.frames[self.get_animation_state()][self.frame_index]
         self.rect = self.image.get_frect(center = pos)
         self.hitbox = self.rect.inflate(-self.rect.width /2, -60)
@@ -61,7 +61,7 @@ class NPC(GameObject):
         #
         # Sets all the character inforamtion from the dictionary in the BigBigData file.
         #
-        self.character_data = character_data
+        self.character_data = character_data.copy()
         self.player = player
         self.start_dialog = start_dialog
         self.collision_rect = [sprite.rect for sprite in collision_sprites if sprite is not self]

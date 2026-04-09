@@ -1,0 +1,65 @@
+name: Godot Port CI
+
+on:
+  push:
+    paths:
+      - "Aminomon/**"
+      - ".github/workflows/godot-port-ci.yml"
+  pull_request:
+    paths:
+      - "Aminomon/**"
+      - ".github/workflows/godot-port-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  smoke-tests:
+    name: Headless Smoke Tests
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.5.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run migration smoke tests
+        run: |
+          mkdir -p /tmp/godot_userdata
+          godot --headless --path Aminomon --user-data-dir /tmp/godot_userdata --log-file /tmp/godot_userdata/godot_ci.log -s res://scripts/SmokeTest.gd
+
+  windows-export-sanity:
+    name: Windows Export Sanity
+    runs-on: windows-latest
+    needs: smoke-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot + export templates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "4.5.1-stable"
+          $godotZip = "$env:RUNNER_TEMP\godot.zip"
+          $templatesTgz = "$env:RUNNER_TEMP\templates.tpz"
+          Invoke-WebRequest "https://github.com/godotengine/godot-builds/releases/download/$version/Godot_v4.5.1-stable_win64.exe.zip" -OutFile $godotZip
+          Expand-Archive -Path $godotZip -DestinationPath "$env:RUNNER_TEMP\godot" -Force
+          $godotExe = (Get-ChildItem "$env:RUNNER_TEMP\godot" -Recurse -Filter "Godot_v4.5.1-stable_win64.exe" | Select-Object -First 1).FullName
+          if ([string]::IsNullOrWhiteSpace($godotExe)) { throw "Godot executable not found after extraction." }
+          "GODOT_EXE=$godotExe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          Invoke-WebRequest "https://github.com/godotengine/godot-builds/releases/download/$version/Godot_v4.5.1-stable_export_templates.tpz" -OutFile $templatesTgz
+          Expand-Archive -Path $templatesTgz -DestinationPath "$env:RUNNER_TEMP\godot_templates" -Force
+          $templateDir = Join-Path $env:APPDATA "Godot\export_templates\4.5.1.stable"
+          New-Item -Path $templateDir -ItemType Directory -Force | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\godot_templates\*" -Destination $templateDir -Recurse -Force
+
+      - name: Export Windows build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -Path "Aminomon/build" -ItemType Directory -Force | Out-Null
+          $userDataDir = Join-Path $env:RUNNER_TEMP "godot_userdata"
+          New-Item -Path $userDataDir -ItemType Directory -Force | Out-Null
+          $logFile = Join-Path $userDataDir "godot_ci.log"
+          & "$env:GODOT_EXE" --headless --path "Aminomon" --user-data-dir "$userDataDir" --log-file "$logFile" --export-release "Windows Desktop" "build/Aminomon.exe"
+          if (!(Test-Path "Aminomon/build/Aminomon.exe")) { throw "Windows export was not produced." }

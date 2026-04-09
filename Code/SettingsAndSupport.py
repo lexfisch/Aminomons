@@ -45,7 +45,7 @@ ChoicesForBattle = {
 }
 
 #
-# The disctionary for colors that we use within the game
+# The dictionary for colors that we use within the game
 #
 COLORS = {
     "white": "#f4fefa", 

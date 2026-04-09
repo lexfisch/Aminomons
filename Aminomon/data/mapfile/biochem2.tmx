@@ -1,0 +1,780 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="10" height="20" tilewidth="64" tileheight="64" infinite="0" nextlayerid="8" nextobjectid="128">
+ <tileset firstgid="1" source="../tileset/indoor_tiles.tsx"/>
+ <tileset firstgid="91" source="../tileset/spriteSheet_tiledLiquids_32x32.tsx"/>
+ <layer id="1" name="Terrain" width="10" height="20">
+  <data encoding="csv">
+1,2,2,2,2,2,2,2,2,3,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+11,12,12,12,12,12,12,12,12,13,
+3221225475,1073741826,1073741826,1073741826,12,12,1073741826,1073741826,1073741826,1073741827
+</data>
+ </layer>
+ <layer id="2" name="Terrain Top" width="10" height="20">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="5" name="GameObjects">
+  <object id="11" name="Player" x="349.218" y="1178.35">
+   <properties>
+    <property name="direction" value="up"/>
+    <property name="pos" value="world"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="9" name="Character" x="114.902" y="178.642">
+   <properties>
+    <property name="character_id" value="bc3"/>
+    <property name="direction" value="down"/>
+    <property name="graphic" value="boss"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="10" name="Character" x="480.486" y="177.16">
+   <properties>
+    <property name="character_id" value="bc5"/>
+    <property name="direction" value="down"/>
+    <property name="graphic" value="boss"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="31" name="Character" x="287.623" y="175.342">
+   <properties>
+    <property name="character_id" value="bc4"/>
+    <property name="direction" value="down"/>
+    <property name="graphic" value="boss"/>
+    <property name="radius" value="30"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="3" name="Collisions">
+  <object id="1" x="19.9043" y="10.7177" width="218.947" height="36.7464"/>
+  <object id="2" x="7.6555" y="67.3684" width="39.8086" height="1194.26"/>
+  <object id="3" x="61.244" y="1237.13" width="186.794" height="30.622"/>
+  <object id="4" x="396.555" y="1232.54" width="232.727" height="38.2775"/>
+  <object id="5" x="591.005" y="3.0622" width="42.8708" height="1209.57"/>
+  <object id="6" x="247.346" y="4.5933" width="322.223" height="33.6842"/>
+ </objectgroup>
+ <objectgroup id="6" name="ChemicalSpills">
+  <object id="13" gid="104" x="96.1818" y="736.182" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="14" gid="104" x="64.1818" y="736.545" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="15" gid="104" x="64.3636" y="768.364" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="16" gid="104" x="96" y="768.364" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="17" gid="104" x="96.3333" y="672.576" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="18" gid="104" x="64.3333" y="672.939" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="19" gid="104" x="64.5151" y="704.758" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="20" gid="104" x="96.1515" y="704.758" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="21" gid="104" x="158.924" y="736.212" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="22" gid="104" x="126.924" y="736.575" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="23" gid="104" x="127.106" y="768.394" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="24" gid="104" x="158.742" y="768.394" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="25" gid="104" x="159.076" y="672.606" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="26" gid="104" x="127.076" y="672.969" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="27" gid="104" x="127.258" y="704.788" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="28" gid="104" x="158.894" y="704.788" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="32" gid="104" x="479.199" y="478.044" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="33" gid="104" x="447.199" y="478.407" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="34" gid="104" x="447.381" y="510.226" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="35" gid="104" x="479.018" y="510.226" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="36" gid="104" x="479.351" y="414.438" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="37" gid="104" x="447.351" y="414.801" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="38" gid="104" x="447.533" y="446.62" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="39" gid="104" x="479.169" y="446.62" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="40" gid="104" x="541.942" y="478.074" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="41" gid="104" x="509.942" y="478.437" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="42" gid="104" x="510.124" y="510.256" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="43" gid="104" x="541.76" y="510.256" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="44" gid="104" x="542.094" y="414.468" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="45" gid="104" x="510.094" y="414.831" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="46" gid="104" x="510.276" y="446.65" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="47" gid="104" x="541.912" y="446.65" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="48" gid="104" x="483.814" y="867.181" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="49" gid="104" x="451.814" y="867.544" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="50" gid="104" x="451.995" y="899.363" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="51" gid="104" x="483.632" y="899.363" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="52" gid="104" x="483.965" y="803.575" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="53" gid="104" x="451.965" y="803.938" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="54" gid="104" x="452.147" y="835.757" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="55" gid="104" x="483.783" y="835.757" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="56" gid="104" x="546.556" y="867.211" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="57" gid="104" x="514.556" y="867.574" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="58" gid="104" x="514.738" y="899.393" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="59" gid="104" x="546.374" y="899.393" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="60" gid="104" x="546.708" y="803.605" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="61" gid="104" x="514.708" y="803.968" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="62" gid="104" x="514.89" y="835.787" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="63" gid="104" x="546.526" y="835.787" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="80" gid="104" x="291.552" y="737.981" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="81" gid="104" x="259.552" y="738.344" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="82" gid="104" x="259.734" y="770.163" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="83" gid="104" x="291.37" y="770.163" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="84" gid="104" x="291.704" y="674.375" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="85" gid="104" x="259.704" y="674.738" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="86" gid="104" x="259.885" y="706.557" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="87" gid="104" x="291.522" y="706.557" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="88" gid="104" x="354.294" y="738.011" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="89" gid="104" x="322.294" y="738.374" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="90" gid="104" x="322.476" y="770.193" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="91" gid="104" x="354.112" y="770.193" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="92" gid="104" x="354.446" y="674.405" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="93" gid="104" x="322.446" y="674.768" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="94" gid="104" x="322.628" y="706.587" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="95" gid="104" x="354.264" y="706.587" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="96" gid="104" x="162.352" y="928.704" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="97" gid="104" x="130.352" y="929.067" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="98" gid="104" x="130.534" y="960.886" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="99" gid="104" x="162.171" y="960.886" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="100" gid="104" x="162.504" y="865.098" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="101" gid="104" x="130.504" y="865.461" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="102" gid="104" x="130.686" y="897.28" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="103" gid="104" x="162.322" y="897.28" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="104" gid="104" x="225.095" y="928.734" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="105" gid="104" x="193.095" y="929.097" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="106" gid="104" x="193.277" y="960.916" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="107" gid="104" x="224.913" y="960.916" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="108" gid="104" x="225.247" y="865.128" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="109" gid="104" x="193.247" y="865.491" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="110" gid="104" x="193.429" y="897.31" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="111" gid="104" x="225.065" y="897.31" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="112" gid="104" x="97.7526" y="484.196" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="113" gid="104" x="65.7526" y="484.559" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="114" gid="104" x="65.9344" y="516.378" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="115" gid="104" x="97.5708" y="516.378" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="116" gid="104" x="97.9041" y="420.59" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="117" gid="104" x="65.9041" y="420.953" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="118" gid="104" x="66.0859" y="452.772" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="119" gid="104" x="97.7223" y="452.772" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="120" gid="104" x="160.495" y="484.226" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="121" gid="104" x="128.495" y="484.589" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="122" gid="104" x="128.677" y="516.408" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="123" gid="104" x="160.313" y="516.408" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="124" gid="104" x="160.647" y="420.62" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="125" gid="104" x="128.647" y="420.983" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="126" gid="104" x="128.829" y="452.802" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+  <object id="127" gid="104" x="160.465" y="452.802" width="32" height="32">
+   <properties>
+    <property name="aminos" value="methionine,phenylalanine,proline,serine"/>
+    <property name="classroom" value="labfight"/>
+    <property name="level" value="3"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="4" name="Objects"/>
+ <objectgroup id="7" name="Transition">
+  <object id="8" x="266.265" y="1217.02" width="97.9904" height="58.1818">
+   <properties>
+    <property name="pos" value="biochem2"/>
+    <property name="target" value="biochem1"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

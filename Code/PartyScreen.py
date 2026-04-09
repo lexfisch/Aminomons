@@ -54,13 +54,14 @@ class PartyScreen:
     def input(self, dt):
         keys = pygame.key.get_just_pressed()
 
-        #if self.party_screen_blocked:
-        if keys[pygame.K_RETURN]:
+        # While the Amino Index overlay is open, only handle closing it here
+        if self.aminoindex_open:
+            if keys[pygame.K_RETURN] or keys[pygame.K_ESCAPE]:
                 self.party_screen_blocked = False
                 self.aminoindex_open = False
+            return
 
-
-        #else:
+        # Normal team / options navigation
         if self.selection_mode == "team":
             if keys[pygame.K_UP]:
                 self.indexes["team"] = (self.indexes["team"] - 1) % len(self.monsters)

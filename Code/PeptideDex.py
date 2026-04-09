@@ -24,9 +24,13 @@ class PeptideDex:
         self.sorted_peptide_dex = sorted(peptideDex.items(), key=lambda item: item[1]['id']) 
 
         peptide_dex_frames = {
-            'icons': importFolderDict('..', 'images', 'iconsAminos'),
-            'aminos': importMonster(4,2,'..', 'images', 'monsAminos'),
-            'ui': importFolderDict('..', 'images', 'ui'),
+            #'icons': importFolderDict('..', 'images', 'iconsAminos'),
+            #'aminos': importMonster(4,2,'..', 'images', 'monsAminos'),
+            #'ui': importFolderDict('..', 'images', 'ui'),
+            
+            'icons': importFolderDict('images', 'iconsAminos'),
+            'aminos': importMonster(4,2, 'images', 'monsAminos'),
+            'ui': importFolderDict('images', 'ui'),
         }
 
         #
@@ -76,20 +80,14 @@ class PeptideDex:
     #   select entries to move.
     #
     def input(self):
+        if not self.sorted_peptide_dex:
+            return
+
         keys = pygame.key.get_just_pressed()
         if keys[pygame.K_UP]:
-            if self.index == 0:
-                #self.index = len(self.sorted_peptide_dex)
-                pass
-            else:
-                self.index -= 1
+            self.index = (self.index - 1) % len(self.sorted_peptide_dex)
         if keys[pygame.K_DOWN]:
-            if self.index == len(self.sorted_peptide_dex):
-                pass
-            else:
-                self.index += 1
-    
-        #self.index = self.index % len(self.sorted_peptide_dex)
+            self.index = (self.index + 1) % len(self.sorted_peptide_dex)
 
     #
     # This method sets up the list that will be on the left side of the Peptide Dex. This list
@@ -99,16 +97,16 @@ class PeptideDex:
         bg_rect = pygame.FRect(self.main_rect.topleft, (self.list_width, self.main_rect.height))
         pygame.draw.rect(self.display_surface, COLORS['gray'], bg_rect, 0, 0, 12, 0, 12, 0)
 
-        v_offset = 0 if self.index < self.visible_items else -(self.index - self.visible_items +1) * self.item_height
+        v_offset = 0 if self.index < self.visible_items else -(self.index - self.visible_items + 1) * self.item_height
         
-        for amino, info in self.sorted_peptide_dex:
+        for row_index, (amino, info) in enumerate(self.sorted_peptide_dex):
             
             # This will set up the colors that we will use within the Aminomon Index. We will make a rect for 
             #  each entry. We will then make surfaces and partner rects for the display text and Aminomon Icon  
-            bg_color = COLORS['gray'] if self.index != info['id'] else COLORS['light']
+            bg_color = COLORS['gray'] if self.index != row_index else COLORS['light']
             text_color = COLORS['white']
 
-            top = self.main_rect.top + info['id'] * self.item_height + v_offset
+            top = self.main_rect.top + row_index * self.item_height + v_offset
             item_rect = pygame.FRect(self.main_rect.left, top, self.list_width, self.item_height)
 
             text_surf = self.fonts['regular'].render(amino, False, text_color)
@@ -146,14 +144,14 @@ class PeptideDex:
     #  
     def display_central_panel(self, dt):
         # We load in a list of data for the selected entry.
-        monster = self.sorted_peptide_dex[self.index-1][0]
-        base_stats = peptideDex[monster]['stats']
-        fusion_info = "None" if peptideDex[monster]['fusion'] == None else peptideDex[monster]['fusion'][0]
-        unfusion_info = peptideDex[monster]['unfusion'] if not None else "None"
-        sci_info = peptideDex[monster]['sci']
+        monster_name, monster_data = self.sorted_peptide_dex[self.index]
+        base_stats = monster_data['stats']
+        fusion_info = "None" if monster_data['fusion'] is None else monster_data['fusion'][0]
+        unfusion_info = "None" if monster_data['unfusion'] is None else monster_data['unfusion']
+        sci_info = monster_data['sci']
     
         # This will set up a rect on the right side of the Aminomon Index for us to work within. 
-        rect = pygame.FRect(self.main_rect.left + self.list_width,self.main_rect.top, self.main_rect.width - self.list_width, self.main_rect.height)
+        rect = pygame.FRect(self.main_rect.left + self.list_width, self.main_rect.top, self.main_rect.width - self.list_width, self.main_rect.height)
         pygame.draw.rect(self.display_surface, COLORS['dark'], rect, 0, 12, 0, 12, 0)
 
         # This will set up the rect for the top section. This will be used for the animation display, 
@@ -164,12 +162,12 @@ class PeptideDex:
         # This will store and display the animation frames. We set up the surface and rect for the animation frames, it will
         #   frames, it will cycle through them at the animation speed.
         self.frame_index += ANISPEED * dt
-        monster_surf = self.amino_frames[monster]['idle'][int(self.frame_index) % len(self.amino_frames[monster]['idle'])]
+        monster_surf = self.amino_frames[monster_name]['idle'][int(self.frame_index) % len(self.amino_frames[monster_name]['idle'])]
         monster_rect = monster_surf.get_frect(center = top_rect.center)
         self.display_surface.blit(monster_surf, monster_rect)
 
         # This will store and display the name of the Aminomon entry.
-        name_surf = self.fonts['bold'].render(monster, False, COLORS['black'])
+        name_surf = self.fonts['bold'].render(monster_name, False, COLORS['black'])
         name_rect = name_surf.get_frect(topleft = top_rect.topleft + vector(10,10))
         self.display_surface.blit(name_surf, name_rect)
 
@@ -191,7 +189,7 @@ class PeptideDex:
         #   We then make the Health Text and the Rect for Health Text. Then we blit them.
         healthbar_rect = pygame.FRect((0,0), (bar_data['width'],bar_data['height'])).move_to(midtop = (bar_data['left_side'], bar_data['top']))
         draw_bars(self.display_surface, healthbar_rect, base_stats["MAX_HEALTH"], base_stats["MAX_HEALTH"], COLORS['green'], COLORS['black'], 2)
-        hp_text = self.fonts['regular'].render(f"HP: {base_stats["MAX_HEALTH"]}/{base_stats["MAX_HEALTH"]}", False, COLORS['white'])
+        hp_text = self.fonts['regular'].render(f"HP: {base_stats['MAX_HEALTH']}/{base_stats['MAX_HEALTH']}", False, COLORS['white'])
         hp_rect = hp_text.get_frect(midleft = healthbar_rect.midleft + vector(10,0))
         self.display_surface.blit(hp_text, hp_rect)
             
@@ -199,7 +197,7 @@ class PeptideDex:
         #   We then make the Energy Text and the Rect for Energy Text. Then we blit them.
         energybar_rect = pygame.FRect((0,0), (bar_data['width'],bar_data['height'])).move_to(midtop = (bar_data['right_side'], bar_data['top']))
         draw_bars(self.display_surface, energybar_rect, base_stats["MAX_ENERGY"], base_stats["MAX_ENERGY"], COLORS['yellow'], COLORS['black'], 2)
-        ep_text = self.fonts['regular'].render(f"EP: {base_stats["MAX_ENERGY"]}/{base_stats["MAX_ENERGY"]}", False, COLORS['white'])
+        ep_text = self.fonts['regular'].render(f"EP: {base_stats['MAX_ENERGY']}/{base_stats['MAX_ENERGY']}", False, COLORS['white'])
         ep_rect = ep_text.get_frect(midleft = energybar_rect.midleft + vector(10,0))
         self.display_surface.blit(ep_text, ep_rect)
 
@@ -231,8 +229,8 @@ class PeptideDex:
             "Charged": "Yes" if sci_info['charged'] else "No",
             "Polar": "Yes" if sci_info['polar'] else "No",
             #'Desc': sci_info['desc']
-            "Fuse into": fusion_info if fusion_info else "None",
-            "Unfuse into": unfusion_info if unfusion_info else "None"
+            "Fuse into": fusion_info,
+            "Unfuse into": unfusion_info
         }
 
         #

@@ -62,23 +62,18 @@ class AminoIndex:
     #   select entries to move.
     #
     def input(self):
+        if not self.monsters:
+            return
+
         keys = pygame.key.get_just_pressed()
         if keys[pygame.K_UP]:
-            if self.index == 0:
-                self.index = len(self.monsters)
-            else:
-                self.index -= 1
+            self.index = (self.index - 1) % len(self.monsters)
         if keys[pygame.K_DOWN]:
-            if self.index == len(self.monsters):
-                self.index = 0
-            else:
-                self.index += 1
+            self.index = (self.index + 1) % len(self.monsters)
         if keys[pygame.K_RETURN]:
             pass
         if keys[pygame.K_ESCAPE]:
             pass
-
-        self.index = self.index % len(self.monsters)
 
     #
     # This is the bulk of the Aminomon Index. We will display the animated Aminomon alonside it's name,

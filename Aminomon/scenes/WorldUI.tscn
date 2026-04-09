@@ -1,0 +1,327 @@
+[gd_scene format=2]
+
+[node name="UILayer" type="CanvasLayer"]
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 768.0
+offset_bottom = 100.0
+color = Color(0.03, 0.04, 0.05, 0.72)
+
+[node name="Info" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 650.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 16
+text = "Aminomon World"
+
+[node name="MapInfo" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 34.0
+offset_right = 540.0
+offset_bottom = 54.0
+theme_override_font_sizes/font_size = 14
+text = "Map: -"
+
+[node name="Status" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 52.0
+offset_right = 640.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 13
+
+[node name="Hint" type="Label" parent="."]
+offset_left = 380.0
+offset_top = 52.0
+offset_right = 980.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 13
+text = "Arrows move | Space interact | P pause | F5 save"
+
+[node name="DialogBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 16.0
+offset_top = 600.0
+offset_right = 1264.0
+offset_bottom = 704.0
+color = Color(0.02, 0.03, 0.04, 0.85)
+
+[node name="DialogText" type="Label" parent="."]
+visible = false
+offset_left = 28.0
+offset_top = 610.0
+offset_right = 1252.0
+offset_bottom = 698.0
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
+[node name="BattleBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 60.0
+offset_top = 110.0
+offset_right = 1220.0
+offset_bottom = 610.0
+color = Color(0.06, 0.01, 0.01, 0.9)
+
+[node name="BattleBackdrop" type="TextureRect" parent="."]
+visible = false
+offset_left = 84.0
+offset_top = 134.0
+offset_right = 704.0
+offset_bottom = 478.0
+expand_mode = 1
+stretch_mode = 1
+
+[node name="BattleOppSprite" type="TextureRect" parent="."]
+visible = false
+offset_left = 168.0
+offset_top = 164.0
+offset_right = 388.0
+offset_bottom = 384.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattlePlayerSprite" type="TextureRect" parent="."]
+visible = false
+offset_left = 404.0
+offset_top = 248.0
+offset_right = 664.0
+offset_bottom = 508.0
+expand_mode = 1
+stretch_mode = 5
+flip_h = true
+
+[node name="BattleEffect" type="TextureRect" parent="."]
+visible = false
+offset_left = 300.0
+offset_top = 220.0
+offset_right = 460.0
+offset_bottom = 380.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleOppHud" type="Label" parent="."]
+visible = false
+offset_left = 96.0
+offset_top = 488.0
+offset_right = 396.0
+offset_bottom = 542.0
+theme_override_font_sizes/font_size = 16
+
+[node name="BattleOppHP" type="ProgressBar" parent="."]
+visible = false
+offset_left = 96.0
+offset_top = 544.0
+offset_right = 396.0
+offset_bottom = 558.0
+show_percentage = false
+
+[node name="BattleOppEN" type="ProgressBar" parent="."]
+visible = false
+offset_left = 96.0
+offset_top = 562.0
+offset_right = 396.0
+offset_bottom = 574.0
+show_percentage = false
+
+[node name="BattlePlayerHud" type="Label" parent="."]
+visible = false
+offset_left = 404.0
+offset_top = 488.0
+offset_right = 704.0
+offset_bottom = 542.0
+theme_override_font_sizes/font_size = 16
+
+[node name="BattlePlayerHP" type="ProgressBar" parent="."]
+visible = false
+offset_left = 404.0
+offset_top = 544.0
+offset_right = 704.0
+offset_bottom = 558.0
+show_percentage = false
+
+[node name="BattlePlayerEN" type="ProgressBar" parent="."]
+visible = false
+offset_left = 404.0
+offset_top = 562.0
+offset_right = 704.0
+offset_bottom = 574.0
+show_percentage = false
+
+[node name="BattleActionIcon0" type="TextureRect" parent="."]
+visible = false
+offset_left = 748.0
+offset_top = 470.0
+offset_right = 782.0
+offset_bottom = 504.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleActionIcon1" type="TextureRect" parent="."]
+visible = false
+offset_left = 860.0
+offset_top = 470.0
+offset_right = 894.0
+offset_bottom = 504.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleActionIcon2" type="TextureRect" parent="."]
+visible = false
+offset_left = 972.0
+offset_top = 470.0
+offset_right = 1006.0
+offset_bottom = 504.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleActionIcon3" type="TextureRect" parent="."]
+visible = false
+offset_left = 1084.0
+offset_top = 470.0
+offset_right = 1118.0
+offset_bottom = 504.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleActionLabel0" type="Label" parent="."]
+visible = false
+offset_left = 788.0
+offset_top = 474.0
+offset_right = 858.0
+offset_bottom = 500.0
+theme_override_font_sizes/font_size = 14
+
+[node name="BattleActionLabel1" type="Label" parent="."]
+visible = false
+offset_left = 900.0
+offset_top = 474.0
+offset_right = 970.0
+offset_bottom = 500.0
+theme_override_font_sizes/font_size = 14
+
+[node name="BattleActionLabel2" type="Label" parent="."]
+visible = false
+offset_left = 1012.0
+offset_top = 474.0
+offset_right = 1082.0
+offset_bottom = 500.0
+theme_override_font_sizes/font_size = 14
+
+[node name="BattleActionLabel3" type="Label" parent="."]
+visible = false
+offset_left = 1124.0
+offset_top = 474.0
+offset_right = 1194.0
+offset_bottom = 500.0
+theme_override_font_sizes/font_size = 14
+
+[node name="BattleMenuMeta" type="Label" parent="."]
+visible = false
+offset_left = 744.0
+offset_top = 600.0
+offset_right = 1184.0
+offset_bottom = 624.0
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 0
+
+[node name="BattleText" type="Label" parent="."]
+visible = false
+offset_left = 736.0
+offset_top = 140.0
+offset_right = 1188.0
+offset_bottom = 460.0
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
+[node name="TeamBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 92.0
+offset_top = 96.0
+offset_right = 1188.0
+offset_bottom = 632.0
+color = Color(0.03, 0.05, 0.03, 0.92)
+
+[node name="TeamText" type="RichTextLabel" parent="."]
+visible = false
+offset_left = 116.0
+offset_top = 120.0
+offset_right = 1164.0
+offset_bottom = 608.0
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = false
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+
+[node name="PauseBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 430.0
+offset_top = 164.0
+offset_right = 850.0
+offset_bottom = 500.0
+color = Color(0.05, 0.04, 0.03, 0.92)
+
+[node name="PauseText" type="RichTextLabel" parent="."]
+visible = false
+offset_left = 454.0
+offset_top = 188.0
+offset_right = 826.0
+offset_bottom = 476.0
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = false
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+
+[node name="DexBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 72.0
+offset_top = 90.0
+offset_right = 1240.0
+offset_bottom = 640.0
+color = Color(0.04, 0.04, 0.08, 0.95)
+
+[node name="DexText" type="RichTextLabel" parent="."]
+visible = false
+offset_left = 96.0
+offset_top = 114.0
+offset_right = 1216.0
+offset_bottom = 616.0
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = false
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+
+[node name="StorageBox" type="ColorRect" parent="."]
+visible = false
+offset_left = 72.0
+offset_top = 116.0
+offset_right = 1240.0
+offset_bottom = 636.0
+color = Color(0.02, 0.03, 0.06, 0.92)
+
+[node name="StorageText" type="RichTextLabel" parent="."]
+visible = false
+offset_left = 96.0
+offset_top = 138.0
+offset_right = 1216.0
+offset_bottom = 614.0
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = false
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+
+[node name="FadeOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)

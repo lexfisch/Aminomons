@@ -27,10 +27,8 @@ class Fight:
         self.end_battle = end_battle
         self.character = character
 
-        # Sets a delay for the opponents move selection
-        self.timers = {
-            'Opp Aminomon Delay': Timer(600, func = self.opponent_attack)
-        }
+        # Turn-based state: alternates between player and enemy turns
+        self.phase = None  # 'player_turn' or 'enemy_turn'
 
         # Sets the groups for all the sprites used in battle.
         self.battle_sprites = SpritesForFights()
@@ -52,6 +50,7 @@ class Fight:
             'target': 0
         }
         self.create_sides()
+        self.start_player_turn()
 
     #
     # This sets up the battle positions for the Aminomons and will load the first Aminomon in the party.
@@ -63,6 +62,32 @@ class Fight:
 
         for i in range(len(self.opponent_sprites)):
             del self.monster_data['opponent'][i]
+
+    #
+    # Helpers for turn-based flow
+    #
+    def get_active_sprite(self, side):
+        group = self.player_sprites if side == 'player' else self.opponent_sprites
+        if not group:
+            return None
+        sprites_by_pos = sorted(group.sprites(), key=lambda s: s.pos_index)
+        return sprites_by_pos[0] if sprites_by_pos else None
+
+    def start_player_turn(self):
+        self.phase = 'player_turn'
+        self.current_monster = self.get_active_sprite('player')
+        self.selection_side = 'player'
+        self.selection_mode = 'choosing'
+        self.indexes = {k: 0 for k in self.indexes}
+
+    def start_enemy_turn(self):
+        self.phase = 'enemy_turn'
+        self.current_monster = self.get_active_sprite('opponent')
+        if self.current_monster:
+            self.opponent_attack()
+        # If battle didn't end during enemy action, return control to player
+        if not self.battle_over:
+            self.start_player_turn()
 
     #
     # This will create the Monster Sprite and Sprites for Name and Level of the Aminomon.
@@ -92,20 +117,34 @@ class Fight:
         AminomonStats(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
     
     #
-    # This handles the user input for the battle class.
+    # This handles the user input for the battle class (player turn only).
     #         
     def input(self):
-        # if self.screen_state == 'choose'
-        if self.selection_mode and self.current_monster:
+        # Only process input during player's turn with an active monster
+        if self.phase != 'player_turn' or not self.selection_mode or not self.current_monster:
+            return
+
             keys = pygame.key.get_just_pressed()
 
             # Match statement for limiters. Each of our selections has a different number of options for selections and this will
             #   resolve using a large if statement for the Up and Down keys.
             match self.selection_mode:
-                case 'choosing': limiter = len(ChoicesForBattle)
-                case 'attacks': limiter = len(self.current_monster.monster.get_skills(all = False))
-                case 'switch': limiter = len(self.available_monsters)
-                case 'target': limiter = len(self.opponent_sprites) if  self.selection_side == 'opponent' else len(self.player_sprites)
+                case 'choosing':
+                    limiter = len(ChoicesForBattle)
+                case 'attacks':
+                    self._current_usable_attacks = self.current_monster.monster.get_skills(all = False)
+                    limiter = len(self._current_usable_attacks)
+                case 'switch':
+                    limiter = len(self.available_monsters)
+                case 'target':
+                    limiter = len(self.opponent_sprites) if  self.selection_side == 'opponent' else len(self.player_sprites)
+
+            # If there are no options in the current mode (e.g. no usable attacks), bail out safely
+            if limiter == 0:
+                if self.selection_mode == 'attacks':
+                    self.selection_mode = 'choosing'
+                    self.indexes['choosing'] = 0
+                return
 
             if keys[pygame.K_DOWN]:
                 self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] + 1) % limiter
@@ -123,12 +162,22 @@ class Fight:
                     self.current_monster.kill()
                     self.create_aminomon(new_monster, index, self.current_monster.pos_index, 'player')
                     self.selection_mode = None
-                    self.update_all_monsters('resume')
+                    # After switching, hand turn to the enemy
+                    if not self.battle_over:
+                        self.start_enemy_turn()
                 
                 # If the user selects an attack, this will start the Aminomon attack animation
                 if self.selection_mode == 'attacks':
                     self.selection_mode = 'target'
-                    self.selected_attack = self.current_monster.monster.get_skills(all = False)[self.indexes['attacks']]
+                    # Use cached usable attacks to avoid recomputing and respect energy constraints
+                    usable_attacks = getattr(self, '_current_usable_attacks', self.current_monster.monster.get_skills(all = False))
+                    if not usable_attacks:
+                        # No usable attacks; return to the main choice menu
+                        self.selection_mode = 'choosing'
+                        self.indexes['choosing'] = 0
+                        self.indexes['attacks'] = 0
+                        return
+                    self.selected_attack = usable_attacks[self.indexes['attacks']]
                     self.selection_side = SKILLS_DATA[self.selected_attack]['target']
                     sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
                     sprites = {sprite.pos_index: sprite for sprite in sprite_group}
@@ -142,30 +191,37 @@ class Fight:
                 # Handles the selection input while on the choosing menu; whether it is attack, switch, or capture
                 if self.selection_mode == 'choosing':
                     if self.indexes['choosing'] == 0:
-                        self.selection_mode = 'attacks'
+                        # Only enter attacks mode if there are usable skills
+                        if self.current_monster.monster.get_skills(all = False):
+                            self.selection_mode = 'attacks'
 
                     if self.indexes['choosing'] == 1:
                         self.selection_mode = 'switch'
 
                     if self.indexes['choosing'] == 2:
-                        #self.selection_mode = 'target'
-                        self.selection_side = 'opponent'
-                        sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
-                        sprites = {sprite.pos_index: sprite for sprite in sprite_group}
-                        monster_sprite = sprites[list(sprites.keys())[self.indexes['target']]]
+                        # Attempt to catch a wild Aminomon (only allowed in wild battles, not trainers)
+                        if self.character is not None:
+                            # Trainer battle; cannot catch their Aminomons
+                            TempSprite(self.current_monster.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000)
+                        else:
+                            self.selection_side = 'opponent'
+                            sprite_group = self.opponent_sprites
+                            if not sprite_group:
+                                return
+                            sprites = {sprite.pos_index: sprite for sprite in sprite_group}
+                            monster_sprite = sprites[list(sprites.keys())[self.indexes['target']]]
 
-                        if monster_sprite.monster.health < monster_sprite.monster.get_single_stat('MAX_HEALTH') * 0.9:
-                            if len(self.monster_data['player']) <= 5:
-                                self.monster_data['player'][len(self.monster_data['player'])] = monster_sprite.monster
-                                monster_sprite.delayed_kill(None)
-                                self.update_all_monsters('resume')
-                            else: 
-                                TempSprite(monster_sprite.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000) 
-                            
-                            #monster_sprite.delayed_kill(None)
-                            #self.update_all_monsters('resume')
-
-                        else: TempSprite(monster_sprite.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000)
+                            # Require the target to be below 50% HP to catch
+                            if monster_sprite.monster.health < monster_sprite.monster.get_single_stat('MAX_HEALTH') * 0.5:
+                                if len(self.monster_data['player']) <= 5:
+                                    self.monster_data['player'][len(self.monster_data['player'])] = monster_sprite.monster
+                                    monster_sprite.delayed_kill(None)
+                                else: 
+                                    # Party full feedback
+                                    TempSprite(monster_sprite.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000) 
+                            else:
+                                # Too much health to catch
+                                TempSprite(monster_sprite.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000)
 
                 self.indexes = {k: 0 for k in self.indexes}
 
@@ -173,36 +229,6 @@ class Fight:
             if keys[pygame.K_ESCAPE]:
                 if self.selection_mode in ('attacks', 'switch', 'target'):
                     self.selection_mode = 'choosing'
-
-    #
-    # Update method for timers in the battle class.
-    #
-    def update_timers(self):
-        for timer in self.timers.values():
-            timer.update()
-
-    #
-    # This will determine which Aminomon is active and Pauses the Aminomons if there is one that is active (has
-    # initiative over 100). It will reset the Aminomon initiative and highlights the active monster.
-    #
-    def check_active(self):
-        for monster_sprite in self.player_sprites.sprites() + self.opponent_sprites.sprites():
-            if monster_sprite.monster.initiative >= 200:
-                monster_sprite.monster.defending = False
-                self.update_all_monsters('pause')
-                monster_sprite.monster.initiative = 0
-                monster_sprite.set_highlight(True)
-                self.current_monster = monster_sprite
-                if self.player_sprites in monster_sprite.groups():
-                    self.selection_mode = 'choosing'
-                else: self.timers['Opp Aminomon Delay'].turnOn()
-
-    #
-    # This is an update method to either Pause or Unpause the Aminomon Initiative Generation
-    #
-    def update_all_monsters(self,option):
-        for monster_srite in self.player_sprites.sprites() + self.opponent_sprites.sprites():
-            monster_srite.monster.paused = True if option == 'pause' else False
 
     #
     # This will take in two monsters and two attacks and then calculate which is 
@@ -251,10 +277,9 @@ class Fight:
         if attack == 'heal':
             target_sprite.monster.health += amount
         
-        else: target_sprite.monster.health -= amount * target_defense
+        else:
+            target_sprite.monster.health -= amount * target_defense
         self.check_death()
-        
-        self.update_all_monsters('resume')
 
     #
     # This checks to see if an Aminomon has been beaten. If the health drops below 0 it will select the next monster from the 
@@ -289,12 +314,27 @@ class Fight:
     #   selected ability.
     #
     def opponent_attack(self):
-        if self.current_monster != None:
-            ability = choice(self.current_monster.monster.get_skills())
-        if self.opponent_sprites.sprites():
-            random_target = choice(self.opponent_sprites.sprites()) if SKILLS_DATA[ability]['target'] == 'player' else choice(self.player_sprites.sprites())
-            self.current_monster.activate_attack(random_target, ability)
-            # return (target, ability)
+        if self.current_monster is None:
+            return
+
+        # Only choose skills the opponent can currently pay the energy cost for
+        usable_skills = self.current_monster.monster.get_skills(all = False)
+        if not usable_skills:
+            return
+
+        ability = choice(usable_skills)
+
+        if not self.player_sprites or not self.opponent_sprites:
+            return
+
+        # Target depends on skill's target side
+        if SKILLS_DATA[ability]['target'] == 'player':
+            random_target = choice(self.player_sprites.sprites())
+        else:
+            random_target = choice(self.opponent_sprites.sprites())
+
+        self.current_monster.activate_attack(random_target, ability)
+        # return (target, ability)
 
     #
     # Checks whether there are still Aminomons to be used in battle. If no, then it will end the fight 
@@ -307,9 +347,10 @@ class Fight:
             for monster in self.monster_data['player'].values():
                 monster.initiative = 0
             
-        if len(self.player_sprites) == 0:
-            pygame.quit()
-            exit()
+        if len(self.player_sprites) == 0 and not self.battle_over:
+            # Player lost the battle; hand control back to the main game instead of quitting outright
+            self.battle_over = True
+            self.end_battle(None)
 
     #
     # This calls specific draw functions depending on what the Player selects. 

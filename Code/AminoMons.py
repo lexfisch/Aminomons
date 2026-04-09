@@ -95,11 +95,10 @@ class Aminomons():
     #   the Aminomon will level up.
     #
     def add_xp(self, amount):
-        if self.level_up - self.xp > amount:
-            self.xp += amount
-        else:
+        self.xp += amount
+        while self.xp >= self.level_up:
+            self.xp -= self.level_up
             self.level += 1
-            self.xp = amount - (self.level_up - self.xp)
             self.level_up = self.level * 150
 
     #

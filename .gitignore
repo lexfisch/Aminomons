@@ -1,0 +1,16 @@
+# Godot local state
+Aminomon/.godot/
+Aminomon/.godot_ci_userdata/
+Aminomon/.godot_userdata_local/
+Aminomon/build/
+tools/godot/
+
+# Runtime logs and temp
+*.log
+*.tmp
+
+# Legacy Python artifacts
+Code/__pycache__/
+*.pyc
+*.pyo
+*.pyd
