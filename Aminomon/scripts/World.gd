@@ -42,10 +42,12 @@ const UI_ICON_TEXT_X_OFFSET: float = 6.0
 const MENU_ICON_SIZE: Vector2 = Vector2(24, 24)
 const MENU_PORTRAIT_SIZE: Vector2 = Vector2(176, 176)
 const MENU_LARGE_ICON_SIZE: Vector2 = Vector2(56, 56)
-const TEAM_GRID_ORIGIN: Vector2 = Vector2(210.0, 208.0)
-const TEAM_GRID_SPACING: Vector2 = Vector2(214.0, 112.0)
-const STORAGE_PARTY_ORIGIN: Vector2 = Vector2(168.0, 232.0)
-const STORAGE_STORAGE_ORIGIN: Vector2 = Vector2(712.0, 196.0)
+const TEAM_GRID_ORIGIN: Vector2 = Vector2(176.0, 214.0)
+const TEAM_GRID_SPACING: Vector2 = Vector2(182.0, 106.0)
+const STORAGE_PARTY_ORIGIN: Vector2 = Vector2(176.0, 228.0)
+const STORAGE_STORAGE_ORIGIN: Vector2 = Vector2(730.0, 228.0)
+const STORAGE_PARTY_SPACING: Vector2 = Vector2(118.0, 96.0)
+const STORAGE_STORAGE_SPACING: Vector2 = Vector2(112.0, 96.0)
 const STORAGE_PARTY_COLUMNS: int = 2
 const STORAGE_STORAGE_COLUMNS: int = 3
 const STORAGE_STORAGE_VISIBLE_SLOTS: int = 12
@@ -61,8 +63,13 @@ const INTERACTION_NOTICE_ICON: String = "res://images/ui/notice.png"
 const TRANSITION_FADE_DURATION: float = 0.24
 const UI_PANEL_COLOR_MAIN: Color = Color(0.05, 0.08, 0.11, 0.94)
 const UI_PANEL_COLOR_DEX_BASE: Color = Color(0.08, 0.1, 0.16, 0.95)
+const UI_PANEL_COLOR_BATTLE: Color = Color(0.06, 0.05, 0.09, 0.93)
+const UI_PANEL_COLOR_PAUSE: Color = Color(0.06, 0.05, 0.04, 0.93)
 const UI_TEXT_COLOR_PRIMARY: Color = Color(0.93, 0.96, 1.0, 1.0)
 const UI_TEXT_COLOR_SUBTLE: Color = Color(0.76, 0.83, 0.94, 1.0)
+const UI_SLOT_COLOR_SELECTED: Color = Color(0.98, 0.86, 0.44, 0.48)
+const UI_SLOT_COLOR_SOURCE: Color = Color(0.62, 0.93, 0.58, 0.42)
+const UI_SLOT_COLOR_IDLE: Color = Color(0.16, 0.2, 0.27, 0.24)
 const MENU_TRANSITION_DURATION: float = 0.14
 const MAP_MILESTONE_REQUIREMENTS := {
 	"biochem2": "lab_badge",
@@ -465,10 +472,21 @@ func _create_storage() -> int:
 
 func save_game() -> void:
 	var save_dir: String = _save_directory_path()
-	var mk_err: int = DirAccess.make_dir_recursive_absolute(save_dir)
+	var root_dir: DirAccess = DirAccess.open("user://")
+	if root_dir == null:
+		push_error("Failed to open user:// root for saving.")
+		_set_status("Save failed: user data directory unavailable")
+		return
+	var mk_err: int = root_dir.make_dir_recursive("save")
+	var save_dir_abs: String = ProjectSettings.globalize_path(save_dir)
+	var mk_err_abs: int = DirAccess.make_dir_recursive_absolute(save_dir_abs)
 	if mk_err != OK:
 		push_error("Failed to create save directory: %s (err=%d)" % [save_dir, mk_err])
 		_set_status("Save failed: could not create %s" % save_dir)
+		return
+	if mk_err_abs != OK:
+		push_error("Failed to create absolute save directory: %s (err=%d)" % [save_dir_abs, mk_err_abs])
+		_set_status("Save failed: could not create %s" % save_dir_abs)
 		return
 
 	var team_saved: bool = _write_saved_mons(TEAM_SAVE_FILE, player_monsters)
@@ -509,9 +527,11 @@ func _battle_randi_range(min_value: int, max_value: int) -> int:
 
 
 func _roll_rarity_variant() -> String:
-	var weights: Dictionary = {}
+	var weighted_entries: Array = []
 	var total_weight: int = 0
-	for variant_key in BigData.RARITY_VARIANTS.keys():
+	var variant_keys: Array = BigData.RARITY_VARIANTS.keys()
+	variant_keys.sort()
+	for variant_key in variant_keys:
 		var rarity_key: String = str(variant_key)
 		var variant_data: Dictionary = BigData.RARITY_VARIANTS.get(rarity_key, {})
 		var weight_value: int = max(0, int(variant_data.get("roll_weight", 0)))
@@ -519,15 +539,19 @@ func _roll_rarity_variant() -> String:
 			weight_value *= 2
 		if weight_value <= 0:
 			continue
-		weights[rarity_key] = weight_value
+		weighted_entries.append({
+			"key": rarity_key,
+			"weight": weight_value
+		})
 		total_weight += weight_value
 	if total_weight <= 0:
 		return "normal"
 	var roll: int = _battle_randi_range(1, total_weight)
 	var running: int = 0
-	for rarity_key_variant in weights.keys():
-		var rarity_key: String = str(rarity_key_variant)
-		running += int(weights[rarity_key])
+	for entry_variant in weighted_entries:
+		var entry: Dictionary = entry_variant
+		var rarity_key: String = str(entry.get("key", "normal"))
+		running += int(entry.get("weight", 0))
 		if roll <= running:
 			return rarity_key
 	return "normal"
@@ -703,7 +727,7 @@ func _ensure_objective_label() -> void:
 		_objective_label.offset_top = 74.0
 		_objective_label.offset_right = 1260.0
 		_objective_label.offset_bottom = 94.0
-		_objective_label.theme_override_font_sizes.font_size = 12
+		_objective_label.add_theme_font_size_override("font_size", 12)
 		_objective_label.modulate = UI_TEXT_COLOR_SUBTLE
 		ui_layer.add_child(_objective_label)
 
@@ -753,7 +777,8 @@ func _save_directory_path() -> String:
 
 
 func _save_file_path(file_name: String) -> String:
-	return _save_directory_path().path_join(file_name)
+	var root: String = _save_directory_path().trim_suffix("/")
+	return "%s/%s" % [root, file_name]
 
 
 func _world_state_file_path() -> String:
@@ -764,14 +789,29 @@ func _map_file_path(map_name: String) -> String:
 	return "%s/%s%s" % [MAPS_DIR, map_name, MAP_EXTENSION]
 
 
+func _file_exists_with_fallback(path_value: String) -> bool:
+	if FileAccess.file_exists(path_value):
+		return true
+	var abs_path: String = ProjectSettings.globalize_path(path_value)
+	return FileAccess.file_exists(abs_path)
+
+
+func _open_file_with_fallback(path_value: String, mode: int):
+	var file: FileAccess = FileAccess.open(path_value, mode)
+	if file != null:
+		return file
+	var abs_path: String = ProjectSettings.globalize_path(path_value)
+	return FileAccess.open(abs_path, mode)
+
+
 func _load_saved_mons(file_name: String) -> Array:
 	var file_path: String = _save_file_path(file_name)
 	var saved_aminos: Array = []
 
-	if not FileAccess.file_exists(file_path):
+	if not _file_exists_with_fallback(file_path):
 		return saved_aminos
 
-	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
+	var file: FileAccess = _open_file_with_fallback(file_path, FileAccess.READ)
 	if file == null:
 		push_error("Failed to open save file for read: %s" % file_path)
 		return saved_aminos
@@ -792,7 +832,7 @@ func _load_saved_mons(file_name: String) -> Array:
 
 func _write_saved_mons(file_name: String, mons: Dictionary) -> bool:
 	var file_path: String = _save_file_path(file_name)
-	var file: FileAccess = FileAccess.open(file_path, FileAccess.WRITE)
+	var file: FileAccess = _open_file_with_fallback(file_path, FileAccess.WRITE)
 	if file == null:
 		push_error("Failed to open save file for write: %s" % file_path)
 		return false
@@ -839,7 +879,7 @@ func _write_saved_mons(file_name: String, mons: Dictionary) -> bool:
 
 func _write_world_state() -> bool:
 	var file_path: String = _world_state_file_path()
-	var file: FileAccess = FileAccess.open(file_path, FileAccess.WRITE)
+	var file: FileAccess = _open_file_with_fallback(file_path, FileAccess.WRITE)
 	if file == null:
 		push_error("Failed to open world state file for write: %s" % file_path)
 		return false
@@ -862,10 +902,10 @@ func _write_world_state() -> bool:
 
 func _load_world_state() -> void:
 	var file_path: String = _world_state_file_path()
-	if not FileAccess.file_exists(file_path):
+	if not _file_exists_with_fallback(file_path):
 		return
 
-	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
+	var file: FileAccess = _open_file_with_fallback(file_path, FileAccess.READ)
 	if file == null:
 		push_error("Failed to open world state file for read: %s" % file_path)
 		return
@@ -1792,6 +1832,10 @@ func _get_aminomon_portrait_texture(mon_name: String) -> Texture2D:
 	return _get_aminomon_icon_texture(mon_name)
 
 
+func _has_mons_aminos_portrait(mon_name: String) -> bool:
+	return _get_aminomon_battle_frame(mon_name, 0, 0) != null
+
+
 func _get_fallback_mon_texture() -> Texture2D:
 	if fallback_mon_texture != null:
 		return fallback_mon_texture
@@ -1960,11 +2004,11 @@ func _render_runtime_icon_grid(
 		backdrop.size = backdrop.custom_minimum_size
 		backdrop.position = slot_pos - Vector2(6.0, 6.0)
 		if index == selected_index:
-			backdrop.color = Color(0.95, 0.84, 0.38, 0.45)
+			backdrop.color = UI_SLOT_COLOR_SELECTED
 		elif index == source_index:
-			backdrop.color = Color(0.56, 0.92, 0.56, 0.38)
+			backdrop.color = UI_SLOT_COLOR_SOURCE
 		else:
-			backdrop.color = Color(0.16, 0.2, 0.27, 0.24)
+			backdrop.color = UI_SLOT_COLOR_IDLE
 		layer.add_child(backdrop)
 
 		var icon_rect := TextureRect.new()
@@ -2372,10 +2416,16 @@ func _render_battle() -> void:
 		message = _battle_render_text()
 
 	if box:
+		if battle_active:
+			box.color = UI_PANEL_COLOR_BATTLE
+		else:
+			_mark_overlay_closed(box)
 		box.visible = not message.is_empty()
 	if label:
 		label.text = message
 		label.visible = not message.is_empty()
+	if box != null and label != null and not message.is_empty():
+		_animate_overlay_open(box, label)
 	_render_battle_visuals()
 
 
@@ -2925,7 +2975,8 @@ func _battle_apply_switch_in_passive(mon, messages: Array) -> void:
 		return
 	var max_energy: float = float(mon.get_single_stat("MAX_ENERGY"))
 	var before_energy: float = float(mon.energy)
-	mon.energy = min(max_energy, before_energy + floor(max_energy * ratio))
+	var restore_amount: float = max(1.0, floor(max_energy * ratio))
+	mon.energy = min(max_energy, before_energy + restore_amount)
 	if mon.has_method("_health_energy_limiter"):
 		mon._health_energy_limiter()
 	var gained: int = int(round(float(mon.energy) - before_energy))
@@ -3069,7 +3120,11 @@ func _battle_run_enemy_turn(existing_messages: Array) -> void:
 		return
 
 	var usable_skills: Array = enemy_mon.get_skills(false)
-	var chosen_skill: String = BASIC_ATTACK_SKILL if usable_skills.is_empty() else str(usable_skills.pick_random())
+	var chosen_skill: String = BASIC_ATTACK_SKILL
+	if not usable_skills.is_empty():
+		usable_skills.sort()
+		var chosen_idx: int = _battle_randi_range(0, usable_skills.size() - 1)
+		chosen_skill = str(usable_skills[chosen_idx])
 	messages.append_array(_battle_apply_skill(chosen_skill, false))
 	_battle_apply_end_turn_effects(messages)
 
@@ -3464,6 +3519,7 @@ func _render_pause_menu() -> void:
 		return
 
 	if not pause_menu_active:
+		_mark_overlay_closed(box)
 		box.visible = false
 		_set_ui_visible(label, false)
 		_set_ui_text(label, "")
@@ -3479,9 +3535,11 @@ func _render_pause_menu() -> void:
 	lines.append("")
 	lines.append("Tip: T opens Party Peptides, D opens Dex from world.")
 
+	box.color = UI_PANEL_COLOR_PAUSE
 	box.visible = true
 	_set_ui_visible(label, true)
 	_set_ui_text(label, "\n".join(PackedStringArray(lines)))
+	_animate_overlay_open(box, label as CanvasItem)
 
 
 func _open_peptide_dex(from_pause: bool = false) -> void:
@@ -3567,6 +3625,7 @@ func _render_peptide_dex() -> void:
 		return
 
 	if not peptide_dex_active:
+		_mark_overlay_closed(box)
 		box.visible = false
 		_set_ui_visible(label, false)
 		_set_ui_text(label, "")
@@ -3585,12 +3644,13 @@ func _render_peptide_dex() -> void:
 		lines.append("[center][color=#c9d5f5][b]PEPTIDE DEX[/b][/color][/center]")
 		lines.append("")
 		lines.append("[center][color=#f2f5ff]No entries available.[/color][/center]")
-		box.color = Color(0.08, 0.1, 0.16, 0.95)
+		box.color = UI_PANEL_COLOR_DEX_BASE
 		box.visible = true
 		_set_ui_visible(label, true)
 		_set_ui_text(label, "\n".join(PackedStringArray(lines)))
 		_clear_runtime_icon_layer("DexIcons")
 		_render_runtime_portrait("DexPortrait", Vector2(1012.0, 132.0), "", false)
+		_animate_overlay_open(box, label)
 		return
 
 	peptide_dex_cursor = clamp(peptide_dex_cursor, 0, peptide_dex_entries.size() - 1)
@@ -3665,6 +3725,7 @@ func _render_peptide_dex() -> void:
 		true,
 		Vector2(304.0, 304.0)
 	)
+	_animate_overlay_open(box, label)
 
 
 func _open_team_menu(from_pause: bool = false) -> void:
@@ -3861,6 +3922,7 @@ func _render_team_menu() -> void:
 		return
 
 	if not team_menu_active:
+		_mark_overlay_closed(box)
 		box.visible = false
 		_set_ui_visible(label, false)
 		_set_ui_text(label, "")
@@ -3899,6 +3961,7 @@ func _render_team_menu() -> void:
 		lines.append("Selected slot: empty")
 	else:
 		lines.append("Selected: %s Lv%d" % [str(focused_mon.name), int(focused_mon.level)])
+		lines.append("Tags: %s | Status: %s" % [_format_mon_badges(focused_mon), _status_display(focused_mon)])
 		lines.append("HP %d / %d | EN %d / %d" % [
 			int(round(float(focused_mon.health))),
 			int(round(float(focused_mon.get_single_stat("MAX_HEALTH")))),
@@ -3919,6 +3982,11 @@ func _render_team_menu() -> void:
 			lines.append("No Aminomon in this slot.")
 		else:
 			lines.append("Element: %s" % str(focused_mon.element))
+			lines.append("Trait: %s | Rarity: %s | Passive: %s" % [
+				_trait_display_name(str(focused_mon.get("trait_id"))),
+				_rarity_badge(str(focused_mon.get("rarity_variant"))),
+				str(BigData.PASSIVE_DATA.get(str(focused_mon.get("passive_id")).strip_edges().to_lower(), {}).get("display_name", "None"))
+			])
 			lines.append("ATK %d  DEF %d  SPD %d  REC %d" % [
 				int(round(float(focused_mon.get_single_stat("attack")))),
 				int(round(float(focused_mon.get_single_stat("defense")))),
@@ -3927,6 +3995,8 @@ func _render_team_menu() -> void:
 			])
 			lines.append("XP %.0f | Next Lv at %.0f" % [float(focused_mon.xp), float(focused_mon.level_up)])
 			lines.append("Skills: %s" % _team_menu_skill_summary(str(focused_mon.name)))
+			if not _has_mons_aminos_portrait(str(focused_mon.name)):
+				lines.append("Sprite note: monsAminos portrait missing, fallback icon in use.")
 	elif team_menu_state == TEAM_MENU_STATE_MOVE_PICK and team_menu_move_source_row >= 0 and team_menu_move_source_row < keys_sorted.size():
 		lines.append("")
 		lines.append("Moving from slot %d" % [team_menu_move_source_row + 1])
@@ -3935,7 +4005,7 @@ func _render_team_menu() -> void:
 	for slot in range(TEAM_MENU_GRID_SLOTS):
 		var mon = _team_menu_mon_for_slot(slot, keys_sorted)
 		team_icon_names.append("" if mon == null else str(mon.name))
-	box.color = Color(0.05, 0.08, 0.11, 0.94)
+	box.color = UI_PANEL_COLOR_MAIN
 	label.bbcode_enabled = false
 	_render_runtime_icon_grid(
 		"TeamIcons",
@@ -3956,6 +4026,7 @@ func _render_team_menu() -> void:
 	box.visible = true
 	_set_ui_visible(label, true)
 	_set_ui_text(label, "\n".join(PackedStringArray(lines)))
+	_animate_overlay_open(box, label)
 
 
 func _team_menu_skill_summary(mon_name: String) -> String:
@@ -4133,6 +4204,7 @@ func _render_storage_menu() -> void:
 		return
 
 	if not storage_menu_active:
+		_mark_overlay_closed(box)
 		box.visible = false
 		_set_ui_visible(label, false)
 		_set_ui_text(label, "")
@@ -4181,19 +4253,21 @@ func _render_storage_menu() -> void:
 		var p_focus = player_monsters.get(p_key, null)
 		if p_focus != null:
 			lines.append("Selected Party #%d: %s Lv%d" % [p_key, str(p_focus.name), int(p_focus.level)])
+			lines.append("Tags: %s | Status: %s" % [_format_mon_badges(p_focus), _status_display(p_focus)])
 	elif storage_menu_side == "storage" and not storage_keys.is_empty():
 		var s_index: int = clamp(storage_menu_storage_cursor, 0, storage_keys.size() - 1)
 		var s_key: int = int(storage_keys[s_index])
 		var s_focus = player_storage.get(s_key, null)
 		if s_focus != null:
 			lines.append("Selected Storage #%d: %s Lv%d" % [s_key, str(s_focus.name), int(s_focus.level)])
+			lines.append("Tags: %s | Status: %s" % [_format_mon_badges(s_focus), _status_display(s_focus)])
 
 	var party_selected_index: int = storage_menu_party_cursor if storage_menu_side == "party" else -1
 	var storage_selected_local: int = -1
 	if storage_menu_side == "storage" and not storage_keys.is_empty():
 		storage_selected_local = clamp(storage_menu_storage_cursor - storage_start, 0, max(0, storage_icon_names.size() - 1))
 
-	box.color = Color(0.04, 0.07, 0.11, 0.94)
+	box.color = UI_PANEL_COLOR_MAIN
 	label.bbcode_enabled = false
 	_render_runtime_icon_grid(
 		"StoragePartyIcons",
@@ -4201,7 +4275,7 @@ func _render_storage_menu() -> void:
 		party_selected_index,
 		STORAGE_PARTY_ORIGIN,
 		STORAGE_PARTY_COLUMNS,
-		Vector2(142.0, 108.0),
+		STORAGE_PARTY_SPACING,
 		14.0,
 		-1,
 		MENU_LARGE_ICON_SIZE
@@ -4212,7 +4286,7 @@ func _render_storage_menu() -> void:
 		storage_selected_local,
 		STORAGE_STORAGE_ORIGIN,
 		STORAGE_STORAGE_COLUMNS,
-		Vector2(128.0, 98.0),
+		STORAGE_STORAGE_SPACING,
 		10.0,
 		-1,
 		MENU_LARGE_ICON_SIZE
@@ -4222,6 +4296,7 @@ func _render_storage_menu() -> void:
 	box.visible = true
 	_set_ui_visible(label, true)
 	_set_ui_text(label, "\n".join(PackedStringArray(lines)))
+	_animate_overlay_open(box, label)
 
 
 func _monster_detail_line(slot_index: int, monster) -> String:
@@ -4279,7 +4354,9 @@ func _trigger_wild_encounter(spill_zone: Dictionary) -> void:
 	var aminos: Array = spill_zone.get("aminos", [])
 	var picked_name: String = "alanine"
 	if not aminos.is_empty():
-		picked_name = str(aminos.pick_random())
+		var aminos_sorted: Array = aminos.duplicate()
+		aminos_sorted.sort()
+		picked_name = str(aminos_sorted[_battle_randi_range(0, aminos_sorted.size() - 1)])
 
 	var base_level: int = int(spill_zone.get("level", 1))
 	var wild_level: int = max(1, base_level + _battle_randi_range(-2, 2))

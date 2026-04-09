@@ -83,7 +83,7 @@ func get_skills(all: bool = true) -> Array:
 				result.append(skill)
 			else:
 				var cost: float = float(BigData.SKILLS_DATA[skill]["cost"])
-				if energy > cost:
+				if energy >= cost:
 					result.append(skill)
 	return result
 

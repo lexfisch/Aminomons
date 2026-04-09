@@ -20,7 +20,7 @@ $candidateLogDirs = @(
 foreach ($logDir in $candidateLogDirs) {
     New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 }
-$logFile = Join-Path $UserDataDir "godot_ci.log"
+$logFile = Join-Path $UserDataDir ("godot_ci_{0}.log" -f [Guid]::NewGuid().ToString("N"))
 
 $commonArgs = @(
     "--headless",
@@ -30,12 +30,26 @@ $commonArgs = @(
 )
 
 Write-Host "Running smoke tests..."
-& $GodotExe @commonArgs -s res://scripts/SmokeTest.gd
+$smokeOutput = & $GodotExe @commonArgs -s res://scripts/SmokeTest.gd 2>&1
+if ($smokeOutput) {
+    $smokeOutput
+}
 if ($null -eq $LASTEXITCODE) {
     $LASTEXITCODE = 0
 }
 if ([int]$LASTEXITCODE -ne 0) {
     throw "Smoke tests failed with exit code $LASTEXITCODE."
+}
+$smokeText = ($smokeOutput | Out-String)
+if ([string]::IsNullOrWhiteSpace($smokeText)) {
+    Write-Host "Smoke output capture unavailable; relying on exit code."
+} else {
+    if ($smokeText -match "\[SmokeTest\] FAILURES") {
+        throw "Smoke tests reported failures."
+    }
+    if ($smokeText -notmatch "\[SmokeTest\] SUCCESS") {
+        throw "Smoke tests did not report success marker."
+    }
 }
 
 if ($RunExport) {

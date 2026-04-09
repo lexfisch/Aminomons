@@ -261,6 +261,311 @@ func _run_world_tests(world: Node) -> void:
 	# Storage PC modal should support panel switching, sorted storage ordering, and transfers.
 	await _run_storage_menu_tests(world)
 
+	# Genre-parity additions: deterministic collection rolls, metadata persistence, status/accuracy/passive rules, and milestone loop scaffolding.
+	await _run_collection_meta_tests(world)
+	await _run_status_accuracy_and_passive_tests(world)
+	await _run_progression_loop_tests(world)
+
+
+func _run_collection_meta_tests(world: Node) -> void:
+	if not world.has_method("_set_debug_rng_seed") or not world.has_method("_roll_rarity_variant"):
+		_record_failure("World missing deterministic rarity-roll helpers")
+		return
+
+	world._set_debug_rng_seed(424242)
+	var rarity_seq_a: Array = []
+	for _i in range(10):
+		rarity_seq_a.append(str(world._roll_rarity_variant()))
+	world._set_debug_rng_seed(424242)
+	var rarity_seq_b: Array = []
+	for _j in range(10):
+		rarity_seq_b.append(str(world._roll_rarity_variant()))
+	_check(rarity_seq_a == rarity_seq_b, "Rarity rolls are deterministic when debug seed is fixed")
+
+	if not world.has_method("_start_battle") or not world.has_method("_battle_attempt_catch"):
+		_record_failure("World missing battle helpers for collection-meta smoke tests")
+		return
+
+	world._start_battle({
+		"kind": "wild",
+		"opponent_name": "alanine",
+		"opponent_level": 4,
+		"opponent_rarity_variant": "rare",
+		"opponent_trait_id": "bold",
+		"opponent_passive_id": "tenacity",
+		"classroom": "labfight"
+	})
+	await process_frame
+	var catch_ctx: Dictionary = world.get("battle_context")
+	var catch_enemy = _battle_active_mon_from_ctx(catch_ctx, false)
+	if catch_enemy == null:
+		_record_failure("Collection-meta catch test could not access wild opponent")
+		_end_test_battle_if_open(world)
+		return
+
+	catch_enemy.health = max(1.0, float(catch_enemy.get_single_stat("MAX_HEALTH")) * 0.3)
+	world._battle_attempt_catch()
+	_drain_battle_messages(world)
+	_check(not bool(world.get("battle_active")), "Metadata catch ends battle")
+
+	var party_after_catch: Dictionary = world.get("player_monsters")
+	var storage_after_catch: Dictionary = world.get("player_storage")
+	var caught_mon = _find_mon_with_metadata(party_after_catch, "alanine", "rare", "bold")
+	if caught_mon == null:
+		caught_mon = _find_mon_with_metadata(storage_after_catch, "alanine", "rare", "bold")
+	_check(caught_mon != null, "Caught Aminomon preserves rarity + trait metadata")
+	if caught_mon != null:
+		_check(str(caught_mon.get("passive_id")).strip_edges().to_lower() == "tenacity", "Caught Aminomon preserves passive metadata")
+
+	if bool(world.get("dialog_active")):
+		_drain_dialogs(world)
+
+	if not _can_write_user_save():
+		_check(true, "Save/load metadata persistence check skipped (user:// write unavailable in this runtime)")
+		return
+
+	if world.has_method("save_game"):
+		world.save_game()
+		await process_frame
+	if world.has_method("start_game"):
+		world.start_game(false)
+		await process_frame
+		await physics_frame
+		var party_after_reload: Dictionary = world.get("player_monsters")
+		var storage_after_reload: Dictionary = world.get("player_storage")
+		var persisted_mon = _find_mon_with_metadata(party_after_reload, "alanine", "rare", "bold")
+		if persisted_mon == null:
+			persisted_mon = _find_mon_with_metadata(storage_after_reload, "alanine", "rare", "bold")
+		_check(persisted_mon != null, "Rarity + trait metadata persist through save/load")
+
+
+func _run_status_accuracy_and_passive_tests(world: Node) -> void:
+	if not world.has_method("_start_battle") or not world.has_method("_battle_apply_skill"):
+		_record_failure("World missing battle helpers for status/passive smoke tests")
+		return
+
+	world._start_battle({
+		"kind": "wild",
+		"opponent_name": "glycine",
+		"opponent_level": 5,
+		"classroom": "labfight"
+	})
+	await process_frame
+	var ctx: Dictionary = world.get("battle_context")
+	var player_mon = _battle_active_mon_from_ctx(ctx, true)
+	var enemy_mon = _battle_active_mon_from_ctx(ctx, false)
+	if player_mon == null or enemy_mon == null:
+		_record_failure("Status/passive tests could not access active battle mons")
+		_end_test_battle_if_open(world)
+		return
+
+	player_mon.energy = player_mon.get_single_stat("MAX_ENERGY")
+	enemy_mon.health = enemy_mon.get_single_stat("MAX_HEALTH")
+	world._set_debug_rng_seed(2026)
+	var burn_msgs_a: Array = world._battle_apply_skill("burn", true)
+	var miss_a: bool = _messages_include(burn_msgs_a, "missed")
+
+	player_mon.energy = player_mon.get_single_stat("MAX_ENERGY")
+	enemy_mon.health = enemy_mon.get_single_stat("MAX_HEALTH")
+	world._set_debug_rng_seed(2026)
+	var burn_msgs_b: Array = world._battle_apply_skill("burn", true)
+	var miss_b: bool = _messages_include(burn_msgs_b, "missed")
+	_check(miss_a == miss_b, "Accuracy outcomes are deterministic with fixed seed")
+
+	player_mon.passive_id = "none"
+	enemy_mon.passive_id = "none"
+	player_mon.set_status("burn", 2)
+	enemy_mon.set_status("poison", 2)
+	var hp_before_player_dot: float = float(player_mon.health)
+	var hp_before_enemy_dot: float = float(enemy_mon.health)
+	var dot_messages: Array = []
+	world._battle_apply_end_turn_effects(dot_messages)
+	_check(float(player_mon.health) < hp_before_player_dot, "Burn damage applies at end of turn")
+	_check(float(enemy_mon.health) < hp_before_enemy_dot, "Poison damage applies at end of turn")
+	if dot_messages.size() >= 2:
+		_check(str(dot_messages[0]).find(str(player_mon.name)) != -1, "End-turn status order resolves player side first")
+
+	var aminomon_script = load("res://scripts/Aminomon.gd")
+	if aminomon_script == null:
+		_record_failure("Could not load Aminomon.gd for passive hook tests")
+	else:
+		var switch_mon = aminomon_script.new("glycine", 6, 0.0)
+		switch_mon.passive_id = "volt_aura"
+		switch_mon.energy = 0.0
+		var switch_messages: Array = []
+		world._battle_apply_switch_in_passive(switch_mon, switch_messages)
+		_check(float(switch_mon.energy) > 0.0, "on_switch_in passive restores energy")
+
+	player_mon.energy = player_mon.get_single_stat("MAX_ENERGY")
+	player_mon.health = player_mon.get_single_stat("MAX_HEALTH")
+	enemy_mon.energy = enemy_mon.get_single_stat("MAX_ENERGY")
+	enemy_mon.health = enemy_mon.get_single_stat("MAX_HEALTH")
+	player_mon.clear_status_state()
+	enemy_mon.clear_status_state()
+	player_mon.passive_id = "none"
+	enemy_mon.passive_id = "spike_shell"
+	world._set_debug_rng_seed(33)
+	var reflect_triggered: bool = false
+	for _attempt in range(6):
+		player_mon.health = player_mon.get_single_stat("MAX_HEALTH")
+		player_mon.energy = player_mon.get_single_stat("MAX_ENERGY")
+		var reflect_msgs: Array = world._battle_apply_skill("basic_attack", true)
+		if _messages_include(reflect_msgs, "reflected"):
+			reflect_triggered = true
+			break
+	_check(reflect_triggered, "on_hit_taken passive reflects damage")
+
+	player_mon.passive_id = "tenacity"
+	enemy_mon.passive_id = "none"
+	player_mon.health = max(1.0, float(player_mon.get_single_stat("MAX_HEALTH")) * 0.3)
+	player_mon.energy = player_mon.get_single_stat("MAX_ENERGY")
+	world._set_debug_rng_seed(3)
+	var low_hp_msgs: Array = world._battle_apply_skill("basic_attack", true)
+	_check(_messages_include(low_hp_msgs, "boosted attack power"), "on_low_hp passive boosts damage output")
+
+	player_mon.passive_id = "regenerator"
+	player_mon.clear_status_state()
+	enemy_mon.clear_status_state()
+	player_mon.health = max(1.0, float(player_mon.get_single_stat("MAX_HEALTH")) * 0.5)
+	var hp_before_regen: float = float(player_mon.health)
+	var regen_messages: Array = []
+	world._battle_apply_end_turn_effects(regen_messages)
+	_check(float(player_mon.health) > hp_before_regen, "on_end_turn passive restores HP")
+
+	_end_test_battle_if_open(world)
+
+
+func _run_progression_loop_tests(world: Node) -> void:
+	if not world.has_method("_load_map") or not world.has_method("_check_transitions"):
+		_record_failure("World missing progression/map transition helpers")
+		return
+
+	world._load_map("firstlab", "world")
+	await process_frame
+	await physics_frame
+
+	var player: Node = world.get("player")
+	if player == null:
+		_record_failure("Progression tests could not access player")
+		return
+
+	world.set("classroom_milestones", {})
+	world.set("rematch_unlocked", false)
+	if world.has_method("_refresh_objective_tracker"):
+		world._refresh_objective_tracker()
+
+	var gated_zone_info: Dictionary = _find_any_gated_transition(world)
+	if gated_zone_info.is_empty():
+		_record_failure("No transition to a gated map was found for progression tests")
+	else:
+		var required_badge: String = str(gated_zone_info.get("required", ""))
+		var target_map: String = str(gated_zone_info.get("target", ""))
+		var gate_rect: Rect2 = gated_zone_info.get("rect", Rect2())
+		var source_map: String = str(gated_zone_info.get("source_map", ""))
+		var source_spawn: String = str(gated_zone_info.get("source_spawn", "world"))
+		world._load_map(source_map, source_spawn)
+		await process_frame
+		await physics_frame
+		player.set("global_position", gate_rect.get_center())
+		world.set("transition_cooldown_until_msec", 0)
+		world._check_transitions()
+		_check(str(world.get("current_map_name")) == source_map, "Map gate blocks %s before %s" % [target_map, required_badge])
+
+		if world.has_method("_mark_milestone") and not required_badge.is_empty():
+			world._mark_milestone(required_badge)
+		world.set("transition_cooldown_until_msec", 0)
+		world._check_transitions()
+		_check(str(world.get("current_map_name")) == target_map, "%s unlocks transition to %s" % [required_badge, target_map])
+
+	if world.has_method("_mark_milestone"):
+		world._mark_milestone("lab_badge")
+		world._mark_milestone("chem_badge")
+		world._mark_milestone("bio_badge")
+	_check(bool(world.get("rematch_unlocked")), "All classroom milestones unlock rematches")
+
+	var objective_tracker: Dictionary = world.get("objective_tracker")
+	_check(str(objective_tracker.get("title", "")) == "Post-Lab Loop", "Objective tracker advances to post-boss loop")
+
+
+func _find_mon_with_metadata(source_dict: Dictionary, mon_name: String, rarity_variant: String, trait_id: String):
+	for mon_variant in source_dict.values():
+		var mon = mon_variant
+		if mon == null:
+			continue
+		if str(mon.name).strip_edges().to_lower() != mon_name.strip_edges().to_lower():
+			continue
+		if str(mon.get("rarity_variant")).strip_edges().to_lower() != rarity_variant.strip_edges().to_lower():
+			continue
+		if str(mon.get("trait_id")).strip_edges().to_lower() != trait_id.strip_edges().to_lower():
+			continue
+		return mon
+	return null
+
+
+func _messages_include(messages: Array, needle: String) -> bool:
+	var normalized_needle: String = needle.strip_edges().to_lower()
+	for msg_variant in messages:
+		var msg: String = str(msg_variant).to_lower()
+		if msg.find(normalized_needle) != -1:
+			return true
+	return false
+
+
+func _can_write_user_save() -> bool:
+	var user_root: DirAccess = DirAccess.open("user://")
+	if user_root == null:
+		return false
+	if user_root.make_dir_recursive("save") != OK:
+		return false
+	var probe_path: String = "user://save/.smoke_write_probe"
+	var probe_file: FileAccess = FileAccess.open(probe_path, FileAccess.WRITE)
+	if probe_file == null:
+		return false
+	probe_file.store_string("ok")
+	probe_file.close()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(probe_path))
+	return true
+
+
+func _find_any_gated_transition(world: Node) -> Dictionary:
+	var gated_targets := {
+		"biochem2": "lab_badge",
+		"biology2": "lab_badge"
+	}
+	var candidates: Array = [
+		{"map": "firstlab", "spawn": "world"},
+		{"map": "biochem1", "spawn": "world"},
+		{"map": "biology1", "spawn": "world"},
+		{"map": "biochem2", "spawn": "world"},
+		{"map": "biology2", "spawn": "world"}
+	]
+	for candidate_variant in candidates:
+		var candidate: Dictionary = candidate_variant
+		var map_name: String = str(candidate.get("map", "firstlab"))
+		var spawn_tag: String = str(candidate.get("spawn", "world"))
+		world._load_map(map_name, spawn_tag)
+		var transitions: Array = world.get("transition_zones")
+		for zone_variant in transitions:
+			var zone: Dictionary = zone_variant
+			var target_map: String = str(zone.get("target", "")).strip_edges().to_lower()
+			if not gated_targets.has(target_map):
+				continue
+			var result: Dictionary = zone.duplicate(true)
+			result["source_map"] = map_name
+			result["source_spawn"] = spawn_tag
+			result["target"] = target_map
+			result["required"] = str(gated_targets.get(target_map, ""))
+			return result
+	return {}
+
+
+func _find_transition_zone_for_target(transition_zones: Array, target_map: String) -> Dictionary:
+	for zone_variant in transition_zones:
+		var zone: Dictionary = zone_variant
+		if str(zone.get("target", "")).strip_edges().to_lower() == target_map.strip_edges().to_lower():
+			return zone
+	return {}
+
 
 func _shape_overlaps(world: Node, player_collision: CollisionShape2D, at_position: Vector2) -> bool:
 	if player_collision == null or player_collision.shape == null:
@@ -603,11 +908,26 @@ func _run_battle_xp_tests(world: Node) -> void:
 	var xp_before: float = float(player_mon.xp)
 	var level_before: int = int(player_mon.level)
 	enemy_mon.health = 1.0
-	if world.has_method("_battle_execute_player_skill"):
-		world._battle_execute_player_skill(chosen_skill)
-	var battle_effect: TextureRect = world.get_node_or_null("UILayer/BattleEffect") as TextureRect
-	_check(battle_effect != null and battle_effect.texture != null, "Using a skill renders attack effect overlay")
-	_drain_battle_messages(world)
+	var defeated: bool = false
+	for _attempt in range(6):
+		if not bool(world.get("battle_active")):
+			defeated = true
+			break
+		if world.has_method("_set_debug_rng_seed"):
+			world._set_debug_rng_seed(6000 + _attempt)
+		if world.has_method("_battle_execute_player_skill"):
+			world._battle_execute_player_skill(chosen_skill)
+		var battle_effect: TextureRect = world.get_node_or_null("UILayer/BattleEffect") as TextureRect
+		_check(battle_effect != null and battle_effect.texture != null, "Using a skill renders attack effect overlay")
+		_drain_battle_messages(world)
+		if not bool(world.get("battle_active")):
+			defeated = true
+			break
+		var ongoing_ctx: Dictionary = world.get("battle_context")
+		var ongoing_enemy = _battle_active_mon_from_ctx(ongoing_ctx, false)
+		if ongoing_enemy != null:
+			ongoing_enemy.health = 1.0
+	_check(defeated, "XP test defeats a wild opponent within retry budget")
 	_check(not bool(world.get("battle_active")), "Defeating wild opponent ends battle in XP test")
 	var xp_after: float = float(player_mon.xp)
 	var level_after: int = int(player_mon.level)
