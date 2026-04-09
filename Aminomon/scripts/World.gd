@@ -59,6 +59,23 @@ const TEAM_MENU_GRID_ROWS: int = 3
 const TEAM_MENU_GRID_SLOTS: int = TEAM_MENU_GRID_COLS * TEAM_MENU_GRID_ROWS
 const INTERACTION_NOTICE_ICON: String = "res://images/ui/notice.png"
 const TRANSITION_FADE_DURATION: float = 0.24
+const UI_PANEL_COLOR_MAIN: Color = Color(0.05, 0.08, 0.11, 0.94)
+const UI_PANEL_COLOR_DEX_BASE: Color = Color(0.08, 0.1, 0.16, 0.95)
+const UI_TEXT_COLOR_PRIMARY: Color = Color(0.93, 0.96, 1.0, 1.0)
+const UI_TEXT_COLOR_SUBTLE: Color = Color(0.76, 0.83, 0.94, 1.0)
+const MENU_TRANSITION_DURATION: float = 0.14
+const MAP_MILESTONE_REQUIREMENTS := {
+	"biochem2": "lab_badge",
+	"biology2": "lab_badge"
+}
+const TRAINER_MILESTONE_REWARDS := {
+	"boss": {"milestone": "lab_badge", "points": 220},
+	"bc5": {"milestone": "chem_badge", "points": 150},
+	"b5": {"milestone": "bio_badge", "points": 150}
+}
+const TRAINER_STANDARD_REWARD_POINTS: int = 45
+const CATCH_REWARD_POINTS: int = 12
+const POST_BOSS_WILD_LEVEL_BONUS: int = 2
 
 @onready var player := $Player
 @onready var fusion_cinematic := $FusionCinematic
@@ -80,6 +97,13 @@ var transition_zones: Array = []
 var npc_records: Array = []
 var chemical_spill_zones: Array = []
 var trainer_battle_state: Dictionary = {}
+var classroom_milestones: Dictionary = {}
+var currency_points: int = 0
+var objective_tracker: Dictionary = {}
+var dex_species_caught: Dictionary = {}
+var dex_variant_caught: Dictionary = {}
+var dex_rewards_claimed: Dictionary = {}
+var rematch_unlocked: bool = false
 var transition_cooldown_until_msec: int = 0
 var interaction_cooldown_until_msec: int = 0
 var wild_encounter_cooldown_until_msec: int = 0
@@ -130,13 +154,19 @@ var aminomon_icon_cache: Dictionary = {}
 var fallback_mon_texture: Texture2D
 var ui_runtime_root: Control
 var _battle_state := BattleStateModule.new()
+var _battle_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _debug_rng_seed: int = 0
+var _menu_open_state: Dictionary = {}
+var _objective_label: Label
 
 
 func _ready() -> void:
 	randomize()
+	_battle_rng.randomize()
 	_ensure_map_roots()
 	_validate_ui_layer()
 	_ensure_runtime_ui_nodes()
+	_ensure_objective_label()
 	_set_fade_overlay_alpha(0.0)
 	_ensure_interaction_notice_sprite()
 	if fusion_cinematic and fusion_cinematic.has_signal("sequence_finished"):
@@ -153,6 +183,10 @@ func _ready() -> void:
 func start_game(is_new_game: bool) -> void:
 	new_game = is_new_game
 	game_active = true
+	if _debug_rng_seed > 0:
+		_battle_rng.seed = int(_debug_rng_seed)
+	else:
+		_battle_rng.randomize()
 	transition_cooldown_until_msec = 0
 	pause_menu_active = false
 	peptide_dex_active = false
@@ -171,6 +205,13 @@ func start_game(is_new_game: bool) -> void:
 	_render_peptide_dex()
 	if new_game:
 		trainer_battle_state.clear()
+		classroom_milestones = {}
+		currency_points = 0
+		objective_tracker = {}
+		dex_species_caught = {}
+		dex_variant_caught = {}
+		dex_rewards_claimed = {}
+		rematch_unlocked = false
 		current_map_name = "firstlab"
 		current_spawn_tag = "world"
 
@@ -180,17 +221,21 @@ func start_game(is_new_game: bool) -> void:
 		_load_world_state()
 
 	_load_map(current_map_name, current_spawn_tag)
+	_register_collection_from_party_and_storage()
+	_refresh_objective_tracker()
+	_update_objective_label()
 
 	if loaded_team:
-		_set_status("Loaded save on %s: %d party, %d storage. F5 saves." % [current_map_name, player_monsters.size(), loaded_storage_count])
+		_set_status("Loaded save on %s: %d party, %d storage, %d pts. F5 saves." % [current_map_name, player_monsters.size(), loaded_storage_count, currency_points])
 	else:
-		_set_status("Started new game on %s: %d party, %d storage. F5 saves." % [current_map_name, player_monsters.size(), loaded_storage_count])
+		_set_status("Started new game on %s: %d party, %d storage, %d pts. F5 saves." % [current_map_name, player_monsters.size(), loaded_storage_count, currency_points])
 
 
 func update_world(delta: float) -> void:
 	if not game_active:
 		return
 
+	_update_objective_label()
 	_handle_input(delta)
 	_update_transition_fade(delta)
 	if battle_active:
@@ -365,20 +410,31 @@ func _create_team() -> bool:
 		var transfer: Array = _load_saved_mons(TEAM_SAVE_FILE)
 		if not transfer.is_empty():
 			for row_variant in transfer:
-				var row: Array = row_variant
+				var row: PackedStringArray = row_variant
 				if row.size() < 4:
 					continue
-				var index_value: int = int(row[0])
-				var amino_name: String = str(row[1])
-				var level_value: int = int(row[2])
-				var xp_amount: float = float(row[3])
-				player_monsters[index_value] = AminomonRes.new(amino_name, level_value, xp_amount)
+				var index_value: int = int(str(row[0]).strip_edges())
+				var amino_name: String = str(row[1]).strip_edges()
+				var level_value: int = int(str(row[2]).strip_edges())
+				var xp_amount: float = float(str(row[3]).strip_edges())
+				var rarity_variant: String = str(row[4]).strip_edges() if row.size() >= 5 else "normal"
+				var trait_id: String = str(row[5]).strip_edges() if row.size() >= 6 else "neutral"
+				var status_type: String = str(row[6]).strip_edges() if row.size() >= 7 else "none"
+				var status_turns: int = int(str(row[7]).strip_edges()) if row.size() >= 8 and not str(row[7]).strip_edges().is_empty() else 0
+				var passive_id: String = str(row[8]).strip_edges() if row.size() >= 9 else ""
+				var mon = AminomonRes.new(amino_name, level_value, xp_amount)
+				if mon != null and mon.has_method("set_mon_metadata"):
+					mon.set_mon_metadata(rarity_variant, trait_id, {"type": status_type, "turns": status_turns}, passive_id)
+				player_monsters[index_value] = mon
 			return true
 
 	var count: int = randi_range(2, 4)
 	for i in range(count):
 		var chosen: String = _pick_random_starter(starters)
-		player_monsters[i] = AminomonRes.new(chosen, 5, 0)
+		var starter = AminomonRes.new(chosen, 5, 0)
+		if starter != null and starter.has_method("set_mon_metadata"):
+			starter.set_mon_metadata(_roll_rarity_variant(), _roll_trait_id(), {"type": "none", "turns": 0}, "")
+		player_monsters[i] = starter
 	return false
 
 
@@ -387,14 +443,22 @@ func _create_storage() -> int:
 	var transfer_box: Array = _load_saved_mons(STORAGE_SAVE_FILE)
 
 	for row_variant in transfer_box:
-		var row: Array = row_variant
+		var row: PackedStringArray = row_variant
 		if row.size() < 4:
 			continue
-		var index_value: int = int(row[0])
-		var amino_name: String = str(row[1])
-		var level_value: int = int(row[2])
-		var xp_amount: float = float(row[3])
-		player_storage[index_value] = AminomonRes.new(amino_name, level_value, xp_amount)
+		var index_value: int = int(str(row[0]).strip_edges())
+		var amino_name: String = str(row[1]).strip_edges()
+		var level_value: int = int(str(row[2]).strip_edges())
+		var xp_amount: float = float(str(row[3]).strip_edges())
+		var rarity_variant: String = str(row[4]).strip_edges() if row.size() >= 5 else "normal"
+		var trait_id: String = str(row[5]).strip_edges() if row.size() >= 6 else "neutral"
+		var status_type: String = str(row[6]).strip_edges() if row.size() >= 7 else "none"
+		var status_turns: int = int(str(row[7]).strip_edges()) if row.size() >= 8 and not str(row[7]).strip_edges().is_empty() else 0
+		var passive_id: String = str(row[8]).strip_edges() if row.size() >= 9 else ""
+		var mon = AminomonRes.new(amino_name, level_value, xp_amount)
+		if mon != null and mon.has_method("set_mon_metadata"):
+			mon.set_mon_metadata(rarity_variant, trait_id, {"type": status_type, "turns": status_turns}, passive_id)
+		player_storage[index_value] = mon
 
 	return player_storage.size()
 
@@ -426,6 +490,262 @@ func _pick_random_starter(starters: Array) -> String:
 	if keys.is_empty():
 		return "alanine"
 	return str(keys[0])
+
+
+func _set_debug_rng_seed(seed_value: int) -> void:
+	_debug_rng_seed = max(0, seed_value)
+	if _debug_rng_seed > 0:
+		_battle_rng.seed = int(_debug_rng_seed)
+	else:
+		_battle_rng.randomize()
+
+
+func _battle_randf() -> float:
+	return _battle_rng.randf()
+
+
+func _battle_randi_range(min_value: int, max_value: int) -> int:
+	return _battle_rng.randi_range(min_value, max_value)
+
+
+func _roll_rarity_variant() -> String:
+	var weights: Dictionary = {}
+	var total_weight: int = 0
+	for variant_key in BigData.RARITY_VARIANTS.keys():
+		var rarity_key: String = str(variant_key)
+		var variant_data: Dictionary = BigData.RARITY_VARIANTS.get(rarity_key, {})
+		var weight_value: int = max(0, int(variant_data.get("roll_weight", 0)))
+		if rarity_key != "normal" and _has_milestone("lab_badge"):
+			weight_value *= 2
+		if weight_value <= 0:
+			continue
+		weights[rarity_key] = weight_value
+		total_weight += weight_value
+	if total_weight <= 0:
+		return "normal"
+	var roll: int = _battle_randi_range(1, total_weight)
+	var running: int = 0
+	for rarity_key_variant in weights.keys():
+		var rarity_key: String = str(rarity_key_variant)
+		running += int(weights[rarity_key])
+		if roll <= running:
+			return rarity_key
+	return "normal"
+
+
+func _roll_trait_id() -> String:
+	var roll: int = _battle_randi_range(1, 100)
+	if roll <= 40:
+		return "neutral"
+	var trait_keys: Array = BigData.TRAIT_DATA.keys()
+	trait_keys.sort()
+	var non_neutral: Array = []
+	for trait_variant in trait_keys:
+		var trait_key: String = str(trait_variant)
+		if trait_key == "neutral":
+			continue
+		non_neutral.append(trait_key)
+	if non_neutral.is_empty():
+		return "neutral"
+	return str(non_neutral[_battle_randi_range(0, non_neutral.size() - 1)])
+
+
+func _rarity_badge(rarity_variant: String) -> String:
+	var rarity_key: String = rarity_variant.strip_edges().to_lower()
+	if not BigData.RARITY_VARIANTS.has(rarity_key):
+		rarity_key = "normal"
+	var rarity_data: Dictionary = BigData.RARITY_VARIANTS.get(rarity_key, {})
+	return str(rarity_data.get("badge", "NRM"))
+
+
+func _trait_display_name(trait_value: String) -> String:
+	var trait_key: String = trait_value.strip_edges().to_lower()
+	var trait_data: Dictionary = BigData.TRAIT_DATA.get(trait_key, BigData.TRAIT_DATA.get("neutral", {}))
+	return str(trait_data.get("display_name", "Neutral"))
+
+
+func _format_mon_badges(mon) -> String:
+	if mon == null:
+		return "[NRM|Neutral]"
+	var rarity_value: String = str(mon.get("rarity_variant")).strip_edges().to_lower()
+	if rarity_value.is_empty():
+		rarity_value = "normal"
+	var trait_value: String = str(mon.get("trait_id")).strip_edges().to_lower()
+	if trait_value.is_empty():
+		trait_value = "neutral"
+	return "[%s|%s]" % [_rarity_badge(rarity_value), _trait_display_name(trait_value)]
+
+
+func _status_display(mon) -> String:
+	if mon == null:
+		return "None"
+	if mon.has_method("status_type"):
+		var status_type: String = str(mon.status_type()).strip_edges().to_lower()
+		if status_type == "none" or status_type.is_empty():
+			return "None"
+		var status_label: String = str(BigData.STATUS_RULES.get(status_type, {}).get("display_name", status_type.capitalize()))
+		var turns_left: int = 0
+		if mon.has_method("status_turns_remaining"):
+			turns_left = int(mon.status_turns_remaining())
+		return "%s(%d)" % [status_label, turns_left]
+	return "None"
+
+
+func _register_mon_collection(mon) -> void:
+	if mon == null:
+		return
+	var mon_name: String = str(mon.name).strip_edges().to_lower()
+	if mon_name.is_empty():
+		return
+	dex_species_caught[mon_name] = true
+	var rarity_value: String = str(mon.get("rarity_variant")).strip_edges().to_lower()
+	if rarity_value.is_empty():
+		rarity_value = "normal"
+	var variant_key: String = "%s|%s" % [mon_name, rarity_value]
+	dex_variant_caught[variant_key] = true
+
+
+func _register_collection_from_party_and_storage() -> void:
+	for mon_variant in player_monsters.values():
+		_register_mon_collection(mon_variant)
+	for mon_variant in player_storage.values():
+		_register_mon_collection(mon_variant)
+	_check_and_grant_dex_rewards([])
+
+
+func _check_and_grant_dex_rewards(messages: Array) -> void:
+	var species_count: int = dex_species_caught.size()
+	var variant_count: int = dex_variant_caught.size()
+	var species_thresholds: Dictionary = BigData.DEX_REWARD_THRESHOLDS.get("species", {})
+	for threshold_variant in species_thresholds.keys():
+		var threshold: int = int(threshold_variant)
+		var reward_key: String = "species_%d" % threshold
+		if species_count < threshold or bool(dex_rewards_claimed.get(reward_key, false)):
+			continue
+		var reward_amount: int = int(species_thresholds.get(threshold_variant, 0))
+		dex_rewards_claimed[reward_key] = true
+		_add_currency_points(reward_amount)
+		messages.append("Dex Reward: %d species captured (+%d pts)." % [threshold, reward_amount])
+	var variant_thresholds: Dictionary = BigData.DEX_REWARD_THRESHOLDS.get("variants", {})
+	for threshold_variant in variant_thresholds.keys():
+		var threshold: int = int(threshold_variant)
+		var reward_key: String = "variant_%d" % threshold
+		if variant_count < threshold or bool(dex_rewards_claimed.get(reward_key, false)):
+			continue
+		var reward_amount: int = int(variant_thresholds.get(threshold_variant, 0))
+		dex_rewards_claimed[reward_key] = true
+		_add_currency_points(reward_amount)
+		messages.append("Dex Reward: %d rarity forms registered (+%d pts)." % [threshold, reward_amount])
+
+
+func _add_currency_points(amount: int) -> void:
+	currency_points = max(0, currency_points + amount)
+	_update_objective_label()
+
+
+func _has_milestone(milestone_key: String) -> bool:
+	return bool(classroom_milestones.get(milestone_key, false))
+
+
+func _mark_milestone(milestone_key: String) -> void:
+	if milestone_key.strip_edges().is_empty():
+		return
+	classroom_milestones[milestone_key] = true
+	if _has_milestone("lab_badge") and _has_milestone("chem_badge") and _has_milestone("bio_badge"):
+		rematch_unlocked = true
+	_refresh_objective_tracker()
+	_update_objective_label()
+
+
+func _refresh_objective_tracker() -> void:
+	if not _has_milestone("lab_badge"):
+		objective_tracker = {
+			"title": "Lab Starter Goal",
+			"next": "Defeat the boss in firstlab.",
+			"progress": "Milestones: 0 / 3"
+		}
+	elif not _has_milestone("chem_badge"):
+		objective_tracker = {
+			"title": "Chemistry Track",
+			"next": "Defeat trainer bc5 in biochem2.",
+			"progress": "Milestones: 1 / 3"
+		}
+	elif not _has_milestone("bio_badge"):
+		objective_tracker = {
+			"title": "Biology Track",
+			"next": "Defeat trainer b5 in biology2.",
+			"progress": "Milestones: 2 / 3"
+		}
+	else:
+		objective_tracker = {
+			"title": "Post-Lab Loop",
+			"next": "Hunt rarity forms and farm rematches.",
+			"progress": "Milestones: 3 / 3"
+		}
+
+
+func _objective_text() -> String:
+	var title: String = str(objective_tracker.get("title", "Objective"))
+	var next_text: String = str(objective_tracker.get("next", ""))
+	var progress_text: String = str(objective_tracker.get("progress", ""))
+	return "%s | %s | %s | Pts %d" % [title, next_text, progress_text, currency_points]
+
+
+func _ensure_objective_label() -> void:
+	var ui_layer: CanvasLayer = get_node_or_null("UILayer") as CanvasLayer
+	if ui_layer == null:
+		return
+	_objective_label = ui_layer.get_node_or_null("Objective") as Label
+	if _objective_label == null:
+		_objective_label = Label.new()
+		_objective_label.name = "Objective"
+		_objective_label.offset_left = 16.0
+		_objective_label.offset_top = 74.0
+		_objective_label.offset_right = 1260.0
+		_objective_label.offset_bottom = 94.0
+		_objective_label.theme_override_font_sizes.font_size = 12
+		_objective_label.modulate = UI_TEXT_COLOR_SUBTLE
+		ui_layer.add_child(_objective_label)
+
+
+func _update_objective_label() -> void:
+	if _objective_label == null or not is_instance_valid(_objective_label):
+		_ensure_objective_label()
+	if _objective_label == null or not is_instance_valid(_objective_label):
+		return
+	_objective_label.text = _objective_text()
+
+
+func _animate_overlay_open(box: ColorRect, label: CanvasItem) -> void:
+	if box == null:
+		return
+	var key: String = str(box.get_instance_id())
+	if bool(_menu_open_state.get(key, false)):
+		return
+	_menu_open_state[key] = true
+	box.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	var base_y: float = box.offset_top
+	box.offset_top = base_y - 8.0
+	box.offset_bottom -= 8.0
+	var tween_box: Tween = create_tween()
+	tween_box.set_ease(Tween.EASE_OUT)
+	tween_box.set_trans(Tween.TRANS_CUBIC)
+	tween_box.tween_property(box, "modulate:a", 1.0, MENU_TRANSITION_DURATION)
+	tween_box.parallel().tween_property(box, "offset_top", base_y, MENU_TRANSITION_DURATION)
+	tween_box.parallel().tween_property(box, "offset_bottom", box.offset_bottom + 8.0, MENU_TRANSITION_DURATION)
+	if label != null:
+		label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		var tween_label: Tween = create_tween()
+		tween_label.set_ease(Tween.EASE_OUT)
+		tween_label.set_trans(Tween.TRANS_CUBIC)
+		tween_label.tween_property(label, "modulate:a", 1.0, MENU_TRANSITION_DURATION + 0.04)
+
+
+func _mark_overlay_closed(box: ColorRect) -> void:
+	if box == null:
+		return
+	var key: String = str(box.get_instance_id())
+	_menu_open_state[key] = false
 
 
 func _save_directory_path() -> String:
@@ -465,12 +785,7 @@ func _load_saved_mons(file_name: String) -> Array:
 			continue
 		if row[0].strip_edges().is_empty():
 			continue
-
-		var index_value: int = int(row[0].strip_edges())
-		var amino_name: String = row[1].strip_edges()
-		var level_value: int = int(row[2].strip_edges())
-		var xp_amount: float = float(row[3].strip_edges())
-		saved_aminos.append([index_value, amino_name, level_value, xp_amount])
+		saved_aminos.append(row)
 
 	return saved_aminos
 
@@ -482,7 +797,9 @@ func _write_saved_mons(file_name: String, mons: Dictionary) -> bool:
 		push_error("Failed to open save file for write: %s" % file_path)
 		return false
 
-	file.store_csv_line(PackedStringArray(["index", "name", "level", "xp_amount"]))
+	file.store_csv_line(PackedStringArray([
+		"index", "name", "level", "xp_amount", "rarity_variant", "trait_id", "status_type", "status_turns", "passive_id"
+	]))
 
 	var indexes: Array = mons.keys()
 	indexes.sort()
@@ -492,11 +809,29 @@ func _write_saved_mons(file_name: String, mons: Dictionary) -> bool:
 		var monster = mons.get(index_value)
 		if monster == null:
 			continue
+		var status_type: String = "none"
+		var status_turns: int = 0
+		if monster.has_method("status_type"):
+			status_type = str(monster.status_type())
+		if monster.has_method("status_turns_remaining"):
+			status_turns = int(monster.status_turns_remaining())
+		var rarity_variant_value: String = str(monster.get("rarity_variant"))
+		if rarity_variant_value.is_empty():
+			rarity_variant_value = "normal"
+		var trait_id_value: String = str(monster.get("trait_id"))
+		if trait_id_value.is_empty():
+			trait_id_value = "neutral"
+		var passive_id_value: String = str(monster.get("passive_id"))
 		file.store_csv_line(PackedStringArray([
 			str(index_value),
 			str(monster.name),
 			str(monster.level),
 			str(monster.xp),
+			rarity_variant_value,
+			trait_id_value,
+			status_type,
+			str(status_turns),
+			passive_id_value,
 		]))
 
 	return true
@@ -513,6 +848,13 @@ func _write_world_state() -> bool:
 		"current_map_name": current_map_name,
 		"current_spawn_tag": current_spawn_tag,
 		"trainer_battle_state": trainer_battle_state,
+		"classroom_milestones": classroom_milestones,
+		"currency_points": currency_points,
+		"objective_tracker": objective_tracker,
+		"dex_species_caught": dex_species_caught,
+		"dex_variant_caught": dex_variant_caught,
+		"dex_rewards_claimed": dex_rewards_claimed,
+		"rematch_unlocked": rematch_unlocked,
 	}
 	file.store_string(JSON.stringify(payload))
 	return true
@@ -547,6 +889,23 @@ func _load_world_state() -> void:
 	var loaded_trainer_state = data.get("trainer_battle_state", {})
 	if typeof(loaded_trainer_state) == TYPE_DICTIONARY:
 		trainer_battle_state = loaded_trainer_state
+	var loaded_milestones = data.get("classroom_milestones", {})
+	if typeof(loaded_milestones) == TYPE_DICTIONARY:
+		classroom_milestones = loaded_milestones
+	currency_points = int(data.get("currency_points", 0))
+	var loaded_objective = data.get("objective_tracker", {})
+	if typeof(loaded_objective) == TYPE_DICTIONARY:
+		objective_tracker = loaded_objective
+	var loaded_species = data.get("dex_species_caught", {})
+	if typeof(loaded_species) == TYPE_DICTIONARY:
+		dex_species_caught = loaded_species
+	var loaded_variants = data.get("dex_variant_caught", {})
+	if typeof(loaded_variants) == TYPE_DICTIONARY:
+		dex_variant_caught = loaded_variants
+	var loaded_rewards = data.get("dex_rewards_claimed", {})
+	if typeof(loaded_rewards) == TYPE_DICTIONARY:
+		dex_rewards_claimed = loaded_rewards
+	rematch_unlocked = bool(data.get("rematch_unlocked", false))
 
 
 func _ensure_map_roots() -> void:
@@ -1886,6 +2245,17 @@ func _start_trainer_battle_from_dialog(npc: Dictionary) -> void:
 
 
 func _finish_trainer_battle(npc: Dictionary) -> void:
+	var reward_points: int = TRAINER_STANDARD_REWARD_POINTS
+	var milestone_messages: Array = []
+	var npc_id: String = str(npc.get("id", "trainer"))
+	if TRAINER_MILESTONE_REWARDS.has(npc_id):
+		var reward_payload: Dictionary = TRAINER_MILESTONE_REWARDS.get(npc_id, {})
+		var milestone_key: String = str(reward_payload.get("milestone", ""))
+		if not milestone_key.is_empty() and not _has_milestone(milestone_key):
+			_mark_milestone(milestone_key)
+			milestone_messages.append("Milestone unlocked: %s" % milestone_key)
+		reward_points += int(reward_payload.get("points", 0))
+	_add_currency_points(reward_points)
 	var record_key: String = str(npc.get("record_key", ""))
 	if not record_key.is_empty():
 		trainer_battle_state[record_key] = true
@@ -1894,6 +2264,8 @@ func _finish_trainer_battle(npc: Dictionary) -> void:
 	var post_lines: Array = _trainer_lines_for_npc(npc)
 	if post_lines.is_empty():
 		post_lines = ["Battle complete."]
+	post_lines.append_array(milestone_messages)
+	post_lines.append("Earned %d pts. Total: %d" % [reward_points, currency_points])
 	post_lines.append(_team_summary())
 	_show_dialog(post_lines)
 
@@ -2230,7 +2602,27 @@ func _update_battle_effect() -> void:
 
 
 func _build_opponent_party_for_battle(ctx: Dictionary) -> Dictionary:
-	return _battle_state.build_opponent_party(ctx, AminomonRes)
+	var party: Dictionary = _battle_state.build_opponent_party(ctx, AminomonRes)
+	var kind: String = str(ctx.get("kind", ""))
+	if kind == "wild":
+		var wild_mon = party.get(0, null)
+		if wild_mon != null and wild_mon.has_method("set_mon_metadata"):
+			wild_mon.set_mon_metadata(
+				str(ctx.get("opponent_rarity_variant", "normal")),
+				str(ctx.get("opponent_trait_id", "neutral")),
+				{"type": "none", "turns": 0},
+				str(ctx.get("opponent_passive_id", ""))
+			)
+	else:
+		for idx_variant in party.keys():
+			var mon = party.get(int(idx_variant), null)
+			if mon == null or not mon.has_method("set_mon_metadata"):
+				continue
+			var passive_id: String = str(mon.get("passive_id")).strip_edges()
+			if passive_id.is_empty():
+				passive_id = BigData.get_species_passive(str(mon.name), str(mon.element))
+			mon.set_mon_metadata("normal", _roll_trait_id(), {"type": "none", "turns": 0}, passive_id)
+	return party
 
 
 func _battle_render_text() -> String:
@@ -2242,6 +2634,20 @@ func _battle_render_text() -> String:
 	lines.append("")
 	lines.append(_battle_side_status_line("You", true))
 	lines.append(_battle_side_status_line("Foe", false))
+	var player_mon = _battle_active_mon(true)
+	var foe_mon = _battle_active_mon(false)
+	if player_mon != null:
+		lines.append("You Tags: %s | Passive: %s | Status: %s" % [
+			_format_mon_badges(player_mon),
+			str(BigData.PASSIVE_DATA.get(str(player_mon.get("passive_id")).strip_edges(), {}).get("display_name", "None")),
+			_status_display(player_mon)
+		])
+	if foe_mon != null:
+		lines.append("Foe Tags: %s | Passive: %s | Status: %s" % [
+			_format_mon_badges(foe_mon),
+			str(BigData.PASSIVE_DATA.get(str(foe_mon.get("passive_id")).strip_edges(), {}).get("display_name", "None")),
+			_status_display(foe_mon)
+		])
 	lines.append("")
 
 	var state: String = str(battle_context.get("state", "main_menu"))
@@ -2380,6 +2786,153 @@ func _battle_attack_option_to_skill_name(option_label: String) -> String:
 	return ""
 
 
+func _battle_mon_has_passive_hook(mon, hook_name: String) -> bool:
+	if mon == null:
+		return false
+	var passive_id: String = str(mon.get("passive_id")).strip_edges().to_lower()
+	if passive_id.is_empty():
+		passive_id = BigData.get_species_passive(str(mon.name), str(mon.element))
+	var passive_data: Dictionary = BigData.PASSIVE_DATA.get(passive_id, {})
+	var hooks: Array = passive_data.get("hooks", [])
+	for hook_variant in hooks:
+		if str(hook_variant).strip_edges().to_lower() == hook_name:
+			return true
+	return false
+
+
+func _battle_pre_action_status_block(attacker, messages: Array) -> bool:
+	if attacker == null or not attacker.has_method("status_type"):
+		return false
+	var status_type: String = str(attacker.status_type()).strip_edges().to_lower()
+	if status_type.is_empty() or status_type == "none":
+		return false
+	var label: String = str(BigData.STATUS_RULES.get(status_type, {}).get("display_name", status_type.capitalize()))
+	if status_type == "sleep":
+		messages.append("%s is asleep and cannot move." % str(attacker.name))
+		if attacker.has_method("decrement_status_turn"):
+			var turns_left: int = int(attacker.decrement_status_turn())
+			if turns_left <= 0:
+				messages.append("%s woke up." % str(attacker.name))
+		return true
+	if status_type == "paralyze":
+		var skip_chance: float = float(BigData.STATUS_RULES.get("paralyze", {}).get("skip_action_chance", 0.35))
+		var skipped: bool = _battle_randf() < skip_chance
+		if attacker.has_method("decrement_status_turn"):
+			attacker.decrement_status_turn()
+		if skipped:
+			messages.append("%s is paralyzed and cannot act." % str(attacker.name))
+			return true
+		messages.append("%s fights through %s." % [str(attacker.name), label])
+		return false
+	return false
+
+
+func _battle_apply_skill_status_effect(skill_data: Dictionary, target, messages: Array) -> void:
+	if target == null or not target.has_method("set_status"):
+		return
+	var status_type: String = str(skill_data.get("status_type", "none")).strip_edges().to_lower()
+	if status_type.is_empty() or status_type == "none":
+		return
+	if target.has_method("has_status") and bool(target.has_status()):
+		return
+	var apply_chance: float = clamp(float(skill_data.get("status_chance", 0.0)), 0.0, 1.0)
+	if apply_chance <= 0.0:
+		return
+	if _battle_randf() > apply_chance:
+		return
+	var status_turns: int = int(skill_data.get("status_turns", 0))
+	target.set_status(status_type, status_turns)
+	var status_label: String = str(BigData.STATUS_RULES.get(status_type, {}).get("display_name", status_type.capitalize()))
+	messages.append("%s is now %s." % [str(target.name), status_label])
+
+
+func _battle_apply_skill_cleanse(skill_data: Dictionary, actual_target, messages: Array) -> void:
+	if actual_target == null or not actual_target.has_method("status_type") or not actual_target.has_method("clear_status_state"):
+		return
+	var cleanse_raw = skill_data.get("cleanse", [])
+	if typeof(cleanse_raw) != TYPE_ARRAY:
+		return
+	var cleanse_list: Array = cleanse_raw
+	if cleanse_list.is_empty():
+		return
+	var current_status: String = str(actual_target.status_type()).strip_edges().to_lower()
+	if current_status == "none" or current_status.is_empty():
+		return
+	for cleanse_variant in cleanse_list:
+		if str(cleanse_variant).strip_edges().to_lower() != current_status:
+			continue
+		actual_target.clear_status_state()
+		messages.append("%s's %s was cured." % [str(actual_target.name), current_status.capitalize()])
+		return
+
+
+func _battle_apply_end_turn_effects(messages: Array) -> void:
+	var ordered_targets: Array = [_battle_active_mon(true), _battle_active_mon(false)]
+	for mon_variant in ordered_targets:
+		var mon = mon_variant
+		if mon == null:
+			continue
+		if float(mon.health) <= 0.0:
+			continue
+		if mon.has_method("status_type"):
+			var status_type: String = str(mon.status_type()).strip_edges().to_lower()
+			if status_type == "burn" or status_type == "poison":
+				var rule: Dictionary = BigData.STATUS_RULES.get(status_type, {})
+				var ratio: float = max(0.0, float(rule.get("end_turn_damage_ratio", 0.0)))
+				if ratio > 0.0:
+					var max_hp: float = float(mon.get_single_stat("MAX_HEALTH"))
+					var dot_damage: float = max(1.0, floor(max_hp * ratio))
+					mon.health -= dot_damage
+					if mon.has_method("_health_energy_limiter"):
+						mon._health_energy_limiter()
+					var status_label: String = str(rule.get("display_name", status_type.capitalize()))
+					messages.append("%s takes %d damage from %s." % [str(mon.name), int(dot_damage), status_label])
+					if mon.has_method("decrement_status_turn"):
+						var turns_left: int = int(mon.decrement_status_turn())
+						if turns_left <= 0:
+							messages.append("%s recovered from %s." % [str(mon.name), status_label])
+		var passive_id: String = str(mon.get("passive_id")).strip_edges().to_lower()
+		if passive_id.is_empty():
+			passive_id = BigData.get_species_passive(str(mon.name), str(mon.element))
+		var passive_data: Dictionary = BigData.PASSIVE_DATA.get(passive_id, {})
+		if _battle_mon_has_passive_hook(mon, "on_end_turn"):
+			var heal_ratio: float = max(0.0, float(passive_data.get("heal_ratio", 0.0)))
+			if heal_ratio > 0.0:
+				var max_hp_passive: float = float(mon.get_single_stat("MAX_HEALTH"))
+				var heal_amount: float = max(1.0, floor(max_hp_passive * heal_ratio))
+				var hp_before: float = float(mon.health)
+				mon.health += heal_amount
+				if mon.has_method("_health_energy_limiter"):
+					mon._health_energy_limiter()
+				var hp_gained: int = int(round(float(mon.health) - hp_before))
+				if hp_gained > 0:
+					messages.append("%s's %s restored %d HP." % [
+						str(mon.name),
+						str(passive_data.get("display_name", "passive")),
+						hp_gained
+					])
+
+
+func _battle_apply_switch_in_passive(mon, messages: Array) -> void:
+	if mon == null or not _battle_mon_has_passive_hook(mon, "on_switch_in"):
+		return
+	var passive_id: String = str(mon.get("passive_id")).strip_edges().to_lower()
+	if passive_id.is_empty():
+		passive_id = BigData.get_species_passive(str(mon.name), str(mon.element))
+	var passive_data: Dictionary = BigData.PASSIVE_DATA.get(passive_id, {})
+	var ratio: float = max(0.0, float(passive_data.get("energy_restore_ratio", 0.0)))
+	if ratio <= 0.0:
+		return
+	var max_energy: float = float(mon.get_single_stat("MAX_ENERGY"))
+	var before_energy: float = float(mon.energy)
+	mon.energy = min(max_energy, before_energy + floor(max_energy * ratio))
+	if mon.has_method("_health_energy_limiter"):
+		mon._health_energy_limiter()
+	var gained: int = int(round(float(mon.energy) - before_energy))
+	if gained > 0:
+		messages.append("%s's %s restored %d energy." % [str(mon.name), str(passive_data.get("display_name", "passive")), gained])
+
+
 func _battle_execute_player_wait() -> void:
 	var player_mon = _battle_active_mon(true)
 	if player_mon == null:
@@ -2451,6 +3004,7 @@ func _battle_execute_player_switch(new_index: int) -> void:
 
 	battle_context["active_player_index"] = new_index
 	var messages: Array = ["Go, %s!" % str(player_monsters[new_index].name)]
+	_battle_apply_switch_in_passive(player_monsters[new_index], messages)
 	_battle_run_enemy_turn(messages)
 
 
@@ -2486,21 +3040,19 @@ func _battle_attempt_catch() -> void:
 	var max_health: float = float(wild_mon.get_single_stat("MAX_HEALTH"))
 	var catchable: bool = float(wild_mon.health) < max_health * 0.5
 	if catchable:
+		var catch_messages: Array = []
 		var new_index: int = _next_party_slot_index(player_monsters) if player_monsters.size() < 6 else _next_party_slot_index(player_storage)
 		if player_monsters.size() < 6:
 			player_monsters[new_index] = wild_mon
-			_battle_queue_messages(
-				["Caught %s!" % str(wild_mon.name), "Added to your party.", _team_summary()],
-				"main_menu",
-				{"action": "catch", "victory": true}
-			)
+			catch_messages = ["Caught %s %s!" % [_format_mon_badges(wild_mon), str(wild_mon.name)], "Added to your party.", _team_summary()]
 		else:
 			player_storage[new_index] = wild_mon
-			_battle_queue_messages(
-				["Caught %s!" % str(wild_mon.name), "Party full; sent to storage.", "Storage now has %d Aminomons." % player_storage.size()],
-				"main_menu",
-				{"action": "catch", "victory": true}
-			)
+			catch_messages = ["Caught %s %s!" % [_format_mon_badges(wild_mon), str(wild_mon.name)], "Party full; sent to storage.", "Storage now has %d Aminomons." % player_storage.size()]
+		_register_mon_collection(wild_mon)
+		_add_currency_points(CATCH_REWARD_POINTS)
+		catch_messages.append("Capture reward: +%d pts (Total %d)." % [CATCH_REWARD_POINTS, currency_points])
+		_check_and_grant_dex_rewards(catch_messages)
+		_battle_queue_messages(catch_messages, "main_menu", {"action": "catch", "victory": true})
 		return
 
 	var messages: Array = ["%s resisted capture." % str(wild_mon.name), "Lower its HP below 50%% first."]
@@ -2519,6 +3071,7 @@ func _battle_run_enemy_turn(existing_messages: Array) -> void:
 	var usable_skills: Array = enemy_mon.get_skills(false)
 	var chosen_skill: String = BASIC_ATTACK_SKILL if usable_skills.is_empty() else str(usable_skills.pick_random())
 	messages.append_array(_battle_apply_skill(chosen_skill, false))
+	_battle_apply_end_turn_effects(messages)
 
 	var pending_end: Dictionary = _battle_check_faints_and_progress(messages)
 	_battle_queue_messages(messages, "main_menu", pending_end)
@@ -2535,6 +3088,8 @@ func _battle_apply_skill(skill_name: String, player_attacker: bool) -> Array:
 		return ["No target available."]
 	if not BigData.SKILLS_DATA.has(normalized_skill):
 		return ["Unknown skill: %s" % skill_name]
+	if _battle_pre_action_status_block(attacker, messages):
+		return messages
 
 	var skill_data: Dictionary = BigData.SKILLS_DATA[normalized_skill]
 	var target_side: String = str(skill_data.get("target", "opponent"))
@@ -2551,11 +3106,25 @@ func _battle_apply_skill(skill_name: String, player_attacker: bool) -> Array:
 
 	if cost_value > 0.0 and attacker.has_method("subtract_cost"):
 		attacker.subtract_cost(normalized_skill)
+	var accuracy_value: float = clamp(float(skill_data.get("accuracy", 1.0)), 0.0, 1.0)
+	if accuracy_value < 1.0 and _battle_randf() > accuracy_value:
+		messages.append("%s used %s, but it missed." % [str(attacker.name), display_skill_name])
+		return messages
 
 	var raw_amount: float = float(attacker.get_attack_value(normalized_skill))
 	var final_amount: float = raw_amount
 	var attack_element: String = str(skill_data.get("element", "normal"))
 	var target_element: String = str(actual_target.element)
+	if _battle_mon_has_passive_hook(attacker, "on_low_hp"):
+		var attacker_passive_id: String = str(attacker.get("passive_id")).strip_edges().to_lower()
+		if attacker_passive_id.is_empty():
+			attacker_passive_id = BigData.get_species_passive(str(attacker.name), str(attacker.element))
+		var attacker_passive_data: Dictionary = BigData.PASSIVE_DATA.get(attacker_passive_id, {})
+		var attacker_hp_ratio: float = float(attacker.health) / max(1.0, float(attacker.get_single_stat("MAX_HEALTH")))
+		if attacker_hp_ratio <= 0.35:
+			var attack_multiplier: float = max(1.0, float(attacker_passive_data.get("attack_multiplier", 1.0)))
+			final_amount *= attack_multiplier
+			messages.append("%s's %s boosted attack power." % [str(attacker.name), str(attacker_passive_data.get("display_name", "passive"))])
 
 	if normalized_skill != "heal":
 		if (attack_element == "fire" and target_element == "earth") or \
@@ -2578,6 +3147,7 @@ func _battle_apply_skill(skill_name: String, player_attacker: bool) -> Array:
 		if actual_target.has_method("_health_energy_limiter"):
 			actual_target._health_energy_limiter()
 		messages.insert(0, "%s used %s and restored %d HP." % [actor_label, display_skill_name, int(round(final_amount))])
+		_battle_apply_skill_cleanse(skill_data, actual_target, messages)
 	else:
 		var target_defense: float = 1.0 - float(actual_target.get_single_stat("defense")) / 1000.0
 		target_defense = clamp(target_defense, 0.0, 1.0)
@@ -2591,6 +3161,23 @@ func _battle_apply_skill(skill_name: String, player_attacker: bool) -> Array:
 			str(actual_target.name),
 			int(round(damage_value))
 		])
+		if _battle_mon_has_passive_hook(actual_target, "on_hit_taken"):
+			var target_passive_id: String = str(actual_target.get("passive_id")).strip_edges().to_lower()
+			if target_passive_id.is_empty():
+				target_passive_id = BigData.get_species_passive(str(actual_target.name), str(actual_target.element))
+			var target_passive_data: Dictionary = BigData.PASSIVE_DATA.get(target_passive_id, {})
+			var reflect_ratio: float = max(0.0, float(target_passive_data.get("reflect_ratio", 0.0)))
+			if reflect_ratio > 0.0 and attacker != actual_target and float(attacker.health) > 0.0:
+				var reflect_damage: float = max(1.0, floor(damage_value * reflect_ratio))
+				attacker.health -= reflect_damage
+				if attacker.has_method("_health_energy_limiter"):
+					attacker._health_energy_limiter()
+				messages.append("%s's %s reflected %d damage." % [
+					str(actual_target.name),
+					str(target_passive_data.get("display_name", "passive")),
+					int(reflect_damage)
+				])
+		_battle_apply_skill_status_effect(skill_data, actual_target, messages)
 
 	return messages
 
@@ -2617,6 +3204,7 @@ func _battle_check_faints_and_progress(messages: Array) -> Dictionary:
 		var next_opp = opponent_party.get(next_opp_idx)
 		if next_opp != null:
 			messages.append("Foe sent out %s!" % str(next_opp.name))
+			_battle_apply_switch_in_passive(next_opp, messages)
 
 	var player_mon = player_party_ref.get(player_active_idx)
 	if player_mon != null and float(player_mon.health) <= 0.0:
@@ -2628,6 +3216,7 @@ func _battle_check_faints_and_progress(messages: Array) -> Dictionary:
 		var next_player = player_party_ref.get(next_player_idx)
 		if next_player != null:
 			messages.append("Go, %s!" % str(next_player.name))
+			_battle_apply_switch_in_passive(next_player, messages)
 
 	return {}
 
@@ -3693,12 +4282,21 @@ func _trigger_wild_encounter(spill_zone: Dictionary) -> void:
 		picked_name = str(aminos.pick_random())
 
 	var base_level: int = int(spill_zone.get("level", 1))
-	var wild_level: int = max(1, base_level + randi_range(-2, 2))
+	var wild_level: int = max(1, base_level + _battle_randi_range(-2, 2))
+	if _has_milestone("lab_badge"):
+		wild_level += POST_BOSS_WILD_LEVEL_BONUS
+	var rarity_variant: String = _roll_rarity_variant()
+	var trait_id: String = _roll_trait_id()
+	var element_name: String = str(BigData.PEPTIDE_DEX.get(picked_name, {}).get("stats", {}).get("element", "normal"))
+	var passive_id: String = BigData.get_species_passive(picked_name, element_name)
 	var classroom: String = str(spill_zone.get("classroom", "labfight"))
 	_start_battle({
 		"kind": "wild",
 		"opponent_name": picked_name,
 		"opponent_level": wild_level,
+		"opponent_rarity_variant": rarity_variant,
+		"opponent_trait_id": trait_id,
+		"opponent_passive_id": passive_id,
 		"classroom": classroom,
 	})
 
@@ -3823,6 +4421,10 @@ func _check_transitions() -> void:
 			var target_map: String = str(zone.get("target", ""))
 			var target_spawn: String = str(zone.get("pos", "world"))
 			if target_map.is_empty():
+				return
+			var required_milestone: String = str(MAP_MILESTONE_REQUIREMENTS.get(target_map, ""))
+			if not required_milestone.is_empty() and not _has_milestone(required_milestone):
+				_set_status("Route to %s is locked. Objective: %s" % [target_map, str(objective_tracker.get("next", "Defeat milestone trainer."))])
 				return
 			transition_cooldown_until_msec = now_msec + 500
 			_trigger_transition_fade()
@@ -4021,6 +4623,9 @@ func _npc_record_key(npc_id: String, position_value: Vector2) -> String:
 
 
 func _npc_is_defeated(npc: Dictionary) -> bool:
+	var npc_id: String = str(npc.get("id", "npc"))
+	if rematch_unlocked and not _is_special_npc(npc_id):
+		return false
 	var record_key: String = str(npc.get("record_key", ""))
 	if record_key.is_empty():
 		return bool(npc.get("defeated", false))

@@ -17,6 +17,10 @@ var xp: float
 var level_up: float
 var fusion: Variant = null
 var unfusion: Variant = null
+var rarity_variant: String = "normal"
+var trait_id: String = "neutral"
+var status_state: Dictionary = {"type": "none", "turns": 0}
+var passive_id: String = ""
 
 
 func _init(_name: String, _level: int, xp_amount: float) -> void:
@@ -44,10 +48,19 @@ func _init(_name: String, _level: int, xp_amount: float) -> void:
 
 	fusion = data.get("fusion", null)
 	unfusion = data.get("unfusion", null)
+	rarity_variant = "normal"
+	trait_id = "neutral"
+	status_state = {"type": "none", "turns": 0}
+	passive_id = BigData.get_species_passive(name, element)
 
 
 func get_single_stat(stat: String) -> float:
-	return float(base_stats.get(stat, 0)) * float(level)
+	var base_value: float = float(base_stats.get(stat, 0)) * float(level)
+	var trait_data: Dictionary = BigData.TRAIT_DATA.get(trait_id, BigData.TRAIT_DATA.get("neutral", {}))
+	var multipliers: Dictionary = trait_data.get("multipliers", {})
+	var multiplier: float = float(multipliers.get(stat, 1.0))
+	multiplier = clamp(multiplier, 0.75, 1.5)
+	return base_value * multiplier
 
 
 func get_all_stats() -> Dictionary:
@@ -111,4 +124,80 @@ func update(delta: float) -> void:
 	_health_energy_limiter()
 	if not paused:
 		initiative += get_single_stat("speed") * delta
+
+
+func set_mon_metadata(
+	rarity_value: String = "normal",
+	trait_value: String = "neutral",
+	status_value: Dictionary = {},
+	passive_value: String = ""
+) -> void:
+	set_rarity(rarity_value)
+	set_trait(trait_value)
+	if status_value.is_empty():
+		clear_status_state()
+	else:
+		var status_type: String = str(status_value.get("type", "none")).strip_edges().to_lower()
+		var status_turns: int = int(status_value.get("turns", 0))
+		set_status(status_type, status_turns)
+	if passive_value.strip_edges().is_empty():
+		passive_id = BigData.get_species_passive(name, element)
+	else:
+		passive_id = passive_value.strip_edges().to_lower()
+
+
+func set_rarity(value: String) -> void:
+	var next_value: String = value.strip_edges().to_lower()
+	if not BigData.RARITY_VARIANTS.has(next_value):
+		next_value = "normal"
+	rarity_variant = next_value
+
+
+func set_trait(value: String) -> void:
+	var next_value: String = value.strip_edges().to_lower()
+	if not BigData.TRAIT_DATA.has(next_value):
+		next_value = "neutral"
+	trait_id = next_value
+
+
+func set_status(status_type: String, turns: int = 0) -> void:
+	var normalized: String = status_type.strip_edges().to_lower()
+	if normalized == "none" or not BigData.STATUS_RULES.has(normalized):
+		clear_status_state()
+		return
+	var rule: Dictionary = BigData.STATUS_RULES.get(normalized, {})
+	var default_turns: int = int(rule.get("default_turns", 0))
+	var final_turns: int = max(0, turns if turns > 0 else default_turns)
+	status_state = {"type": normalized, "turns": final_turns}
+
+
+func clear_status_state() -> void:
+	status_state = {"type": "none", "turns": 0}
+
+
+func has_status(status_type: String = "") -> bool:
+	var current_type: String = str(status_state.get("type", "none")).strip_edges().to_lower()
+	if current_type == "none":
+		return false
+	if status_type.strip_edges().is_empty():
+		return true
+	return current_type == status_type.strip_edges().to_lower()
+
+
+func status_type() -> String:
+	return str(status_state.get("type", "none")).strip_edges().to_lower()
+
+
+func status_turns_remaining() -> int:
+	return int(status_state.get("turns", 0))
+
+
+func decrement_status_turn() -> int:
+	if not has_status():
+		return 0
+	var turns_left: int = max(0, int(status_state.get("turns", 0)) - 1)
+	status_state["turns"] = turns_left
+	if turns_left <= 0:
+		clear_status_state()
+	return turns_left
 

@@ -1899,41 +1899,213 @@ const SKILLS_DATA := {
 		"amount": 2,
 		"cost": 5,
 		"element": "fire",
-		"animation": "attack"
+		"animation": "attack",
+		"accuracy": 0.92,
+		"status_type": "burn",
+		"status_chance": 0.4
 	},
 	"heal": {
 		"target": "player",
 		"amount": 2,
 		"cost": 5,
 		"element": "earth",
-		"animation": "heal"
+		"animation": "heal",
+		"accuracy": 1.0,
+		"cleanse": ["burn", "poison"]
 	},
 	"scratch": {
 		"target": "opponent",
 		"amount": 2,
 		"cost": 1,
 		"element": "normal",
-		"animation": "attack"
+		"animation": "attack",
+		"accuracy": 0.95
 	},
 	"tackle": {
 		"target": "opponent",
 		"amount": 2,
 		"cost": 1,
 		"element": "electric",
-		"animation": "attack"
+		"animation": "attack",
+		"accuracy": 0.93,
+		"status_type": "paralyze",
+		"status_chance": 0.25,
+		"status_turns": 2
 	},
 	"splash": {
 		"target": "opponent",
 		"amount": 2,
 		"cost": 1,
 		"element": "water",
-		"animation": "attack"
+		"animation": "attack",
+		"accuracy": 0.94,
+		"status_type": "sleep",
+		"status_chance": 0.2,
+		"status_turns": 2
 	},
 	"basic_attack": {
 		"target": "opponent",
 		"amount": 1,
 		"cost": 0,
 		"element": "normal",
-		"animation": "attack"
+		"animation": "attack",
+		"accuracy": 0.98
 	}
 }
+
+
+const RARITY_VARIANTS := {
+	"normal": {
+		"roll_weight": 985,
+		"display_name": "Normal",
+		"badge": "NRM",
+		"color": "#D5D8E3"
+	},
+	"rare": {
+		"roll_weight": 14,
+		"display_name": "Rare",
+		"badge": "RAR",
+		"color": "#77C4FF"
+	},
+	"prismatic": {
+		"roll_weight": 1,
+		"display_name": "Prismatic",
+		"badge": "PRI",
+		"color": "#FFD966"
+	}
+}
+
+
+const TRAIT_DATA := {
+	"neutral": {
+		"display_name": "Neutral",
+		"summary": "Balanced growth.",
+		"multipliers": {}
+	},
+	"bold": {
+		"display_name": "Bold",
+		"summary": "Defense up, speed down.",
+		"multipliers": {"defense": 1.1, "speed": 0.9}
+	},
+	"swift": {
+		"display_name": "Swift",
+		"summary": "Speed up, max health down.",
+		"multipliers": {"speed": 1.1, "MAX_HEALTH": 0.92}
+	},
+	"fierce": {
+		"display_name": "Fierce",
+		"summary": "Attack up, defense down.",
+		"multipliers": {"attack": 1.1, "defense": 0.9}
+	},
+	"sturdy": {
+		"display_name": "Sturdy",
+		"summary": "Max health up, attack down.",
+		"multipliers": {"MAX_HEALTH": 1.08, "attack": 0.92}
+	}
+}
+
+
+const STATUS_RULES := {
+	"burn": {
+		"display_name": "Burn",
+		"default_turns": 3,
+		"end_turn_damage_ratio": 0.08
+	},
+	"poison": {
+		"display_name": "Poison",
+		"default_turns": 4,
+		"end_turn_damage_ratio": 0.1
+	},
+	"sleep": {
+		"display_name": "Sleep",
+		"default_turns": 2,
+		"skip_action": true
+	},
+	"paralyze": {
+		"display_name": "Paralyze",
+		"default_turns": 3,
+		"skip_action_chance": 0.35
+	}
+}
+
+
+const PASSIVE_DATA := {
+	"none": {
+		"display_name": "None",
+		"hooks": [],
+		"summary": ""
+	},
+	"tenacity": {
+		"display_name": "Tenacity",
+		"hooks": ["on_low_hp"],
+		"attack_multiplier": 1.15,
+		"summary": "Attack rises at low HP."
+	},
+	"regenerator": {
+		"display_name": "Regenerator",
+		"hooks": ["on_end_turn"],
+		"heal_ratio": 0.04,
+		"summary": "Recovers HP each turn."
+	},
+	"volt_aura": {
+		"display_name": "Volt Aura",
+		"hooks": ["on_switch_in"],
+		"energy_restore_ratio": 0.12,
+		"summary": "Recovers energy on switch-in."
+	},
+	"spike_shell": {
+		"display_name": "Spike Shell",
+		"hooks": ["on_hit_taken"],
+		"reflect_ratio": 0.18,
+		"summary": "Reflects chip damage when hit."
+	}
+}
+
+
+const SPECIES_PASSIVES := {
+	"alanine": "tenacity",
+	"alaninex2": "tenacity",
+	"alaninex3": "tenacity",
+	"glycine": "regenerator",
+	"glycinex2": "regenerator",
+	"glycinex3": "regenerator",
+	"arginine": "volt_aura",
+	"argininex2": "volt_aura",
+	"argininex3": "volt_aura",
+	"proline": "spike_shell",
+	"prolinex2": "spike_shell",
+	"prolinex3": "spike_shell"
+}
+
+
+const DEFAULT_PASSIVE_BY_ELEMENT := {
+	"fire": "tenacity",
+	"water": "regenerator",
+	"electric": "volt_aura",
+	"earth": "spike_shell",
+	"normal": "none"
+}
+
+
+const DEX_REWARD_THRESHOLDS := {
+	"species": {
+		5: 50,
+		10: 120,
+		20: 280
+	},
+	"variants": {
+		3: 75,
+		6: 180,
+		12: 420
+	}
+}
+
+
+static func get_species_passive(mon_name: String, element_name: String = "normal") -> String:
+	var normalized_name: String = mon_name.strip_edges().to_lower()
+	if SPECIES_PASSIVES.has(normalized_name):
+		return str(SPECIES_PASSIVES[normalized_name])
+	var normalized_element: String = element_name.strip_edges().to_lower()
+	if DEFAULT_PASSIVE_BY_ELEMENT.has(normalized_element):
+		return str(DEFAULT_PASSIVE_BY_ELEMENT[normalized_element])
+	return "none"
